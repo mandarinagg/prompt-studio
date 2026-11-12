@@ -1,0 +1,49 @@
+# Local tooling / memory
+.remember/
+.claude/settings.local.json
+graphify-out/
+
+# Secrets
+.env
+.env.*
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+
+# Node / Tauri
+node_modules/
+app/dist/
+app/src-tauri/target/
+
+# Media: never commit personal media. Test fixtures are downloaded by script.
+*.jpg
+*.jpeg
+*.png
+*.tif
+*.tiff
+*.webp
+*.heic
+*.mp4
+*.mov
+*.mkv
+*.wav
+*.mp3
+!docs/**/*.png
+!tests/fixtures/tiny/**
+
+# Project caches / models
+cache/
+models/
+*.pstudio-cache/
+
+# OS
+Thumbs.db
+.DS_Store
