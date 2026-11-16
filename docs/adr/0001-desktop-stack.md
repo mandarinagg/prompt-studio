@@ -1,6 +1,6 @@
 # ADR-0001 — Stack de escritorio: Tauri 2 + React + TypeScript
 
-- **Estado:** Propuesto — validado por el spike #3, pendiente de aprobación
+- **Estado:** Aceptado (2026-11-16, validado por el spike #3)
 - **Fecha:** 2026-11-12
 
 ## Contexto

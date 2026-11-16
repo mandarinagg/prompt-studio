@@ -20,7 +20,7 @@ se recalibran al cerrar M0 con datos reales de velocidad.
 - [x] Spike: sidecar Python dentro de Tauri — tamaño y arranque. (#3 → ADR-0006: Python embebible; instalador 23.7 MB, arranque < 1 s)
 - [ ] Spike: FFmpeg AMF (h264_amf/hevc_amf) en la RX 6600 XT.
 - [ ] Spike: llama.cpp Vulkan + JSON Schema con modelo 7–8B Q4 — latencia y validez.
-- [ ] Aprobar ADR-0001…0005. (0002–0005 aceptados 2026-11-16; 0001 pendiente del spike #3)
+- [x] Aprobar ADR-0001…0006. (aceptados 2026-11-16)
 - [x] Fixtures de prueba con licencia libre (fotos 24 MP, contraluz, interior cálido, ruido).
 
 ## Fuera de roadmap hasta nuevo aviso
