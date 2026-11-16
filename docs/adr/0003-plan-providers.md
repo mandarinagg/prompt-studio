@@ -1,6 +1,6 @@
 # ADR-0003 — Proveedores de plan: reglas, LLM local, LLM nube opt-in
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado (2026-11-16)
 - **Fecha:** 2026-11-12
 
 ## Decisión

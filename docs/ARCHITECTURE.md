@@ -18,7 +18,7 @@
 │  project/     project.json versionado + SQLite (índice/caché)                        │
 └──────────────────────────────────────────────────────────────────────────────────────┘
         │                    │                         │
-     FFmpeg (LGPL)     pyvips / OpenCV            llama.cpp / ONNX Runtime (opcional)
+     FFmpeg (LGPL)     pyvips (+ OpenCV opc.)     llama.cpp / ONNX Runtime (opcional)
 ```
 
 ## Decisiones clave

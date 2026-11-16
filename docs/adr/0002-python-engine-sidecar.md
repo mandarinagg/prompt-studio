@@ -1,6 +1,6 @@
 # ADR-0002 — Engine en Python 3.12 como sidecar, CLI-first
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado (2026-11-16)
 - **Fecha:** 2026-11-12
 
 ## Decisión

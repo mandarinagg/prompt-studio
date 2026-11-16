@@ -1,6 +1,6 @@
 # ADR-0004 — Licencia MIT y FFmpeg LGPL
 
-- **Estado:** Propuesto (cambiable mientras haya un único autor)
+- **Estado:** Aceptado (2026-11-16)
 - **Fecha:** 2026-11-12
 
 ## Decisión
