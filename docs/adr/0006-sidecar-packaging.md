@@ -1,6 +1,6 @@
 # ADR-0006 — Empaquetado del sidecar: Python embebible oficial, no PyInstaller
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado (2026-11-16)
 - **Fecha:** 2026-11-16
 - **Evidencia:** spike #3, [`engine/spikes/sidecar/RESULTS.md`](../../engine/spikes/sidecar/RESULTS.md)
 - **Complementa:** ADR-0002 (engine Python sidecar), que dejaba el empaquetado abierto
