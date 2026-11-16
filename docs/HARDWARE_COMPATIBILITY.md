@@ -24,7 +24,7 @@
 ## Backends de aceleración en esta GPU
 | Uso | Backend recomendado | Notas |
 |---|---|---|
-| Encode video | FFmpeg `h264_amf`, `hevc_amf` | RDNA2 **no codifica AV1**; decodifica AV1 sí |
+| Encode video | FFmpeg `h264_amf`, `hevc_amf` | **Verificado (spike #4):** ~300 fps 1080p (~10× tiempo real), VMAF ≈ OpenH264 al mismo bitrate. `av1_amf` falla en RDNA2: para AV1 usar `libsvtav1` por CPU (1.9× tiempo real) |
 | LLM local | llama.cpp / Ollama con **Vulkan** | 7–8B Q4 ≈ 5 GB VRAM |
 | STT | whisper.cpp con Vulkan | Modelos small/medium |
 | Upscaling | Real-ESRGAN ncnn-vulkan | |

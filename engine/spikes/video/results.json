@@ -1,0 +1,183 @@
+{
+  "ffmpeg": "ffmpeg version n9.0.2-57-gd838f9f9ae-20261115 Copyright (c) 2000-2026 the FFmpeg developers",
+  "rows": [
+    {
+      "encoder": "h264_amf speed",
+      "target_mbps": 6,
+      "seconds": 5.55,
+      "fps": 108.1,
+      "realtime_x": 3.6,
+      "actual_mbps": 5.54,
+      "vmaf": 93.08,
+      "vmaf_min": 82.8,
+      "psnr_y": 34.41,
+      "ssim": 0.9916
+    },
+    {
+      "encoder": "h264_amf balanced",
+      "target_mbps": 6,
+      "seconds": 5.55,
+      "fps": 108.1,
+      "realtime_x": 3.6,
+      "actual_mbps": 5.56,
+      "vmaf": 93.06,
+      "vmaf_min": 82.77,
+      "psnr_y": 34.42,
+      "ssim": 0.9916
+    },
+    {
+      "encoder": "h264_amf quality",
+      "target_mbps": 6,
+      "seconds": 5.41,
+      "fps": 110.9,
+      "realtime_x": 3.7,
+      "actual_mbps": 5.56,
+      "vmaf": 93.09,
+      "vmaf_min": 82.78,
+      "psnr_y": 34.44,
+      "ssim": 0.9916
+    },
+    {
+      "encoder": "hevc_amf speed",
+      "target_mbps": 6,
+      "seconds": 5.39,
+      "fps": 111.4,
+      "realtime_x": 3.7,
+      "actual_mbps": 7.21,
+      "vmaf": 95.42,
+      "vmaf_min": 82.75,
+      "psnr_y": 35.54,
+      "ssim": 0.9944
+    },
+    {
+      "encoder": "hevc_amf quality",
+      "target_mbps": 6,
+      "seconds": 5.43,
+      "fps": 110.4,
+      "realtime_x": 3.7,
+      "actual_mbps": 6.94,
+      "vmaf": 94.97,
+      "vmaf_min": 82.05,
+      "psnr_y": 35.57,
+      "ssim": 0.9943
+    },
+    {
+      "encoder": "av1_amf",
+      "target_mbps": 6,
+      "error": "[out#0/matroska @ 000001af7fb81f80] Nothing was written into output file, because at least one of its streams received no packets. | frame=    0 fps=0.0 q=0.0 Lsize=       0KiB time=N/A bitrate=N/A speed=N/A elapsed=0:00:00.28     | Conversion failed!"
+    },
+    {
+      "encoder": "libopenh264 (CPU)",
+      "target_mbps": 6,
+      "seconds": 8.18,
+      "fps": 73.3,
+      "realtime_x": 2.4,
+      "actual_mbps": 5.55,
+      "vmaf": 93.19,
+      "vmaf_min": 83.47,
+      "psnr_y": 39.96,
+      "ssim": 0.9927
+    },
+    {
+      "encoder": "libsvtav1 p8 (CPU)",
+      "target_mbps": 6,
+      "seconds": 10.79,
+      "fps": 55.6,
+      "realtime_x": 1.9,
+      "actual_mbps": 4.83,
+      "vmaf": 97.37,
+      "vmaf_min": 94.09,
+      "psnr_y": 45.44,
+      "ssim": 0.9991
+    },
+    {
+      "encoder": "h264_amf speed",
+      "target_mbps": 12,
+      "seconds": 5.17,
+      "fps": 116.1,
+      "realtime_x": 3.9,
+      "actual_mbps": 11.37,
+      "vmaf": 95.03,
+      "vmaf_min": 87.48,
+      "psnr_y": 35.3,
+      "ssim": 0.9938
+    },
+    {
+      "encoder": "h264_amf balanced",
+      "target_mbps": 12,
+      "seconds": 5.45,
+      "fps": 110.1,
+      "realtime_x": 3.7,
+      "actual_mbps": 11.39,
+      "vmaf": 95.04,
+      "vmaf_min": 87.49,
+      "psnr_y": 35.31,
+      "ssim": 0.9939
+    },
+    {
+      "encoder": "h264_amf quality",
+      "target_mbps": 12,
+      "seconds": 5.92,
+      "fps": 101.3,
+      "realtime_x": 3.4,
+      "actual_mbps": 11.34,
+      "vmaf": 94.99,
+      "vmaf_min": 87.5,
+      "psnr_y": 35.32,
+      "ssim": 0.9939
+    },
+    {
+      "encoder": "hevc_amf speed",
+      "target_mbps": 12,
+      "seconds": 5.21,
+      "fps": 115.1,
+      "realtime_x": 3.8,
+      "actual_mbps": 12.53,
+      "vmaf": 96.14,
+      "vmaf_min": 89.59,
+      "psnr_y": 36.01,
+      "ssim": 0.9949
+    },
+    {
+      "encoder": "hevc_amf quality",
+      "target_mbps": 12,
+      "seconds": 5.49,
+      "fps": 109.3,
+      "realtime_x": 3.6,
+      "actual_mbps": 12.37,
+      "vmaf": 95.89,
+      "vmaf_min": 89.31,
+      "psnr_y": 36.06,
+      "ssim": 0.9949
+    },
+    {
+      "encoder": "av1_amf",
+      "target_mbps": 12,
+      "error": "[out#0/matroska @ 0000022be5304cc0] Nothing was written into output file, because at least one of its streams received no packets. | frame=    0 fps=0.0 q=0.0 Lsize=       0KiB time=N/A bitrate=N/A speed=N/A elapsed=0:00:00.27     | Conversion failed!"
+    },
+    {
+      "encoder": "libopenh264 (CPU)",
+      "target_mbps": 12,
+      "seconds": 8.92,
+      "fps": 67.3,
+      "realtime_x": 2.2,
+      "actual_mbps": 10.89,
+      "vmaf": 95.23,
+      "vmaf_min": 87.21,
+      "psnr_y": 41.52,
+      "ssim": 0.9947
+    },
+    {
+      "encoder": "libsvtav1 p8 (CPU)",
+      "target_mbps": 12,
+      "seconds": 10.3,
+      "fps": 58.2,
+      "realtime_x": 1.9,
+      "actual_mbps": 9.12,
+      "vmaf": 97.76,
+      "vmaf_min": 94.71,
+      "psnr_y": 46.5,
+      "ssim": 0.9993
+    }
+  ]
+}
