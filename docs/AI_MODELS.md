@@ -5,7 +5,7 @@ fuente oficial** antes de integrar.
 
 | Modelo | Uso | Licencia | Tamaño | VRAM/RAM | Backend | Local/Nube | Estado |
 |---|---|---|---|---|---|---|---|
-| LLM 7–8B instruct Q4 (a elegir) | Plan desde prompt | por verificar | ~5 GB | ~6 GB VRAM | llama.cpp Vulkan | Local | Spike M0 |
+| **Qwen3-8B Q4_K_M** (GGUF oficial `Qwen/Qwen3-8B-GGUF`, commit `7c41481`) | Plan desde prompt | **Apache-2.0** (verificado en LICENSE y model card, 2026-11-16) | 5.03 GB (SHA-256 `d98cdcbd…5785`) | ~4.7 GiB VRAM con ctx 2048 (medido) | llama.cpp b12359 (v1.0.0, MIT) Vulkan | Local | Spike M0 #5 ✅ |
 | Whisper (small/medium) | Subtítulos | MIT (verificar) | 0.5–1.5 GB | 2–5 GB | whisper.cpp Vulkan | Local | M6 |
 | Real-ESRGAN | Upscaling | BSD-3 (verificar) | ~65 MB | 2 GB | ncnn-vulkan | Local | M6 |
 | BiRefNet / RMBG | Quitar fondo | verificar (RMBG tiene restricciones) | 0.2–1 GB | 2–4 GB | ONNX DirectML | Local | M6 |

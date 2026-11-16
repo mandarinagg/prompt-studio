@@ -44,6 +44,8 @@ app/src-tauri/target/
 cache/
 models/
 *.pstudio-cache/
+*.gguf
+engine/spikes/**/server_*.log
 
 # OS
 Thumbs.db

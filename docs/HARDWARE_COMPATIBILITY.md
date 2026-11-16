@@ -25,7 +25,7 @@
 | Uso | Backend recomendado | Notas |
 |---|---|---|
 | Encode video | FFmpeg `h264_amf`, `hevc_amf` | **Verificado (spike #4):** ~300 fps 1080p (~10× tiempo real), VMAF ≈ OpenH264 al mismo bitrate. `av1_amf` falla en RDNA2: para AV1 usar `libsvtav1` por CPU (1.9× tiempo real) |
-| LLM local | llama.cpp / Ollama con **Vulkan** | 7–8B Q4 ≈ 5 GB VRAM |
+| LLM local | llama.cpp (`llama-server`) con **Vulkan** | **Verificado (spike #5):** Qwen3-8B Q4_K_M, 37/37 capas en GPU, ~4.7 GiB VRAM con ctx 2048, ~42 tok/s (4 s por plan). Solo CPU: 4.5 tok/s (~30 s por plan). Usar ctx chico: `-c 8192` baja a 30 tok/s |
 | STT | whisper.cpp con Vulkan | Modelos small/medium |
 | Upscaling | Real-ESRGAN ncnn-vulkan | |
 | Segmentación / ONNX | ONNX Runtime + DirectML | Verificar estado de soporte vigente de DirectML/WinML |

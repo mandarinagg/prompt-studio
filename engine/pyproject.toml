@@ -19,6 +19,7 @@ spike = [
     "pillow>=11",
     "opencv-python-headless>=4.10",
     "psutil>=6",
+    "pydantic>=2.9",
 ]
 
 [build-system]

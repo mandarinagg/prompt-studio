@@ -1,0 +1,245 @@
+{
+  "model": "Qwen3-8B-Q4_K_M.gguf",
+  "server": "llama.cpp-b12359",
+  "ngl": 0,
+  "ctx": 2048,
+  "prompt": "v1",
+  "load_s": 2.9,
+  "modes": {
+    "schema": {
+      "summary": {
+        "n": 8,
+        "json_ok_first": 8,
+        "valid_first": 7,
+        "valid_after_retry": 8,
+        "correct": 5,
+        "repeated_op": 0,
+        "ops_median": 2.0,
+        "latency_median_s": 32.21,
+        "latency_p90_s": 70.63,
+        "latency_max_s": 70.63,
+        "gen_tok_s_median": 4.45,
+        "prompt_tok_median": 66.5
+      },
+      "rows": [
+        {
+          "id": "dark-candle",
+          "mode": "schema",
+          "attempts": [
+            {
+              "wall_s": 27.672,
+              "prompt_tokens": 551,
+              "prompt_ms": 3759,
+              "gen_tokens": 96,
+              "gen_tok_s": 4.0,
+              "json_ok": true,
+              "valid": true,
+              "error": null,
+              "output": "{\n  \"schema_version\": \"1.0\",\n  \"operations\": [\n    {\n      \"op\": \"exposure\",\n      \"ev\": 1\n    }\n  ],\n  \"export\": null,\n  \"explanation\": \"Ajusté la exposición para hacer la imagen un poco más clara, manteniendo el equilibrio entre los detalles y la luminosidad.\",\n  \"unsupported\": [],\n  \"clarification\": \"\"\n}"
+            }
+          ],
+          "fails": [],
+          "ops": [
+            "exposure"
+          ],
+          "unsupported": false,
+          "clarification": ""
+        },
+        {
+          "id": "catalog-square",
+          "mode": "schema",
+          "attempts": [
+            {
+              "wall_s": 41.081,
+              "prompt_tokens": 80,
+              "prompt_ms": 1183,
+              "gen_tokens": 178,
+              "gen_tok_s": 4.4,
+              "json_ok": true,
+              "valid": true,
+              "error": null,
+              "output": "{\n  \"schema_version\": \"1.0\",\n  \"operations\": [\n    {\n      \"op\": \"exposure\",\n      \"ev\": 0.5\n    },\n    {\n      \"op\": \"white_balance\",\n      \"temperature_shift\": 0,\n      \"tint_shift\": 0\n    },\n    {\n      \"op\": \"crop\",\n      \"aspect_ratio\": \"1:1\",\n      \"anchor\": \"center\"\n    }\n  ],\n  \"export\": {\n    \"format\": \"jpeg\",\n    \"quality\": 90\n  },\n  \"explanation\": \"Ajusté la iluminación para mejorar el brillo general y mantuve el balance de blancos neutro. Creé una versión cuadrada centrada para el catálogo.\",\n  \"unsupported\": [],\n  \"clarification\": \"\"\n}"
+            }
+          ],
+          "fails": [],
+          "ops": [
+            "exposure",
+            "white_balance",
+            "crop"
+          ],
+          "unsupported": false,
+          "clarification": ""
+        },
+        {
+          "id": "warm-cast",
+          "mode": "schema",
+          "attempts": [
+            {
+              "wall_s": 25.692,
+              "prompt_tokens": 77,
+              "prompt_ms": 1179,
+              "gen_tokens": 109,
+              "gen_tok_s": 4.4,
+              "json_ok": true,
+              "valid": true,
+              "error": null,
+              "output": "{\n  \"schema_version\": \"1.0\",\n  \"operations\": [\n    {\n      \"op\": \"white_balance\",\n      \"temperature_shift\": -10,\n      \"tint_shift\": 0\n    }\n  ],\n  \"export\": null,\n  \"explanation\": \"Se ha corregido el balance de blancos para reducir el tono amarillo de la foto, ajustando la temperatura hacia un valor más frío.\",\n  \"unsupported\": [],\n  \"clarification\": \"\"\n}"
+            }
+          ],
+          "fails": [],
+          "ops": [
+            "white_balance"
+          ],
+          "unsupported": false,
+          "clarification": ""
+        },
+        {
+          "id": "instagram-story",
+          "mode": "schema",
+          "attempts": [
+            {
+              "wall_s": 23.303,
+              "prompt_tokens": 35,
+              "prompt_ms": 1072,
+              "gen_tokens": 100,
+              "gen_tok_s": 4.5,
+              "json_ok": true,
+              "valid": true,
+              "error": null,
+              "output": "{\n  \"schema_version\": \"1.0\",\n  \"operations\": [\n    {\n      \"op\": \"crop\",\n      \"aspect_ratio\": \"1:1\",\n      \"anchor\": \"center\"\n    }\n  ],\n  \"export\": null,\n  \"explanation\": \"Recorté la imagen a una proporción cuadrada 1:1 para adaptarla a una historia de Instagram.\",\n  \"unsupported\": [],\n  \"clarification\": \"\"\n}"
+            }
+          ],
+          "fails": [
+            "crop.aspect_ratio=['1:1'], esperaba 9:16"
+          ],
+          "ops": [
+            "crop"
+          ],
+          "unsupported": false,
+          "clarification": ""
+        },
+        {
+          "id": "noisy-night",
+          "mode": "schema",
+          "attempts": [
+            {
+              "wall_s": 32.21,
+              "prompt_tokens": 56,
+              "prompt_ms": 1122,
+              "gen_tokens": 139,
+              "gen_tok_s": 4.4,
+              "json_ok": true,
+              "valid": true,
+              "error": null,
+              "output": "{\n  \"schema_version\": \"1.0\",\n  \"operations\": [\n    {\n      \"op\": \"denoise\",\n      \"strength\": 0.7\n    },\n    {\n      \"op\": \"sharpen\",\n      \"amount\": 30,\n      \"radius\": 1.5\n    }\n  ],\n  \"export\": null,\n  \"explanation\": \"Se aplicó un desenfoque moderado para reducir el ruido manteniendo las estrellas visibles. También se ajustó el enfoque para mejorar la nitidez sin perder detalles.\",\n  \"unsupported\": [],\n  \"clarification\": \"\"\n}"
+            }
+          ],
+          "fails": [
+            "no debía usar sharpen"
+          ],
+          "ops": [
+            "denoise",
+            "sharpen"
+          ],
+          "unsupported": false,
+          "clarification": ""
+        },
+        {
+          "id": "backlit",
+          "mode": "schema",
+          "attempts": [
+            {
+              "wall_s": 47.571,
+              "prompt_tokens": 88,
+              "prompt_ms": 1204,
+              "gen_tokens": 213,
+              "gen_tok_s": 4.6,
+              "json_ok": true,
+              "valid": true,
+              "error": null,
+              "output": "{\n  \"schema_version\": \"1.0\",\n  \"operations\": [\n    {\n      \"op\": \"exposure\",\n      \"ev\": 0.5\n    },\n    {\n      \"op\": \"shadows\",\n      \"amount\": 30\n    },\n    {\n      \"op\": \"highlights\",\n      \"amount\": -20\n    },\n    {\n      \"op\": \"white_balance\",\n      \"temperature_shift\": 10,\n      \"tint_shift\": 0\n    }\n  ],\n  \"export\": {\n    \"format\": \"jpeg\",\n    \"quality\": 90\n  },\n  \"explanation\": \"Ajusté la exposición para mejorar el contraste entre el árbol y el cielo, aumenté el detalle en las sombras y reduje el brillo del cielo para evitar que se queme. También ajusté el balance de blancos para mejorar la tonalidad general.\",\n  \"unsupported\": [],\n  \"clarification\": \"\"\n}"
+            }
+          ],
+          "fails": [],
+          "ops": [
+            "exposure",
+            "shadows",
+            "highlights",
+            "white_balance"
+          ],
+          "unsupported": false,
+          "clarification": ""
+        },
+        {
+          "id": "bw",
+          "mode": "schema",
+          "attempts": [
+            {
+              "wall_s": 28.169,
+              "prompt_tokens": 37,
+              "prompt_ms": 1056,
+              "gen_tokens": 135,
+              "gen_tok_s": 4.9,
+              "json_ok": true,
+              "valid": true,
+              "error": null,
+              "output": "{\n  \"schema_version\": \"1.0\",\n  \"operations\": [\n    {\n      \"op\": \"white_balance\",\n      \"temperature_shift\": 50,\n      \"tint_shift\": 0\n    },\n    {\n      \"op\": \"contrast\",\n      \"amount\": 30\n    }\n  ],\n  \"export\": null,\n  \"explanation\": \"Se ha aplicado un ajuste de blanco y negro con un desplazamiento de temperatura para oscurecer los tonos cálidos y un aumento de contraste para intensificar los detalles.\",\n  \"unsupported\": [],\n  \"clarification\": \"\"\n}"
+            }
+          ],
+          "fails": [
+            "falta saturation"
+          ],
+          "ops": [
+            "white_balance",
+            "contrast"
+          ],
+          "unsupported": false,
+          "clarification": ""
+        },
+        {
+          "id": "resize-1080",
+          "mode": "schema",
+          "attempts": [
+            {
+              "wall_s": 70.629,
+              "prompt_tokens": 42,
+              "prompt_ms": 1078,
+              "gen_tokens": 337,
+              "gen_tok_s": 4.8,
+              "json_ok": true,
+              "valid": false,
+              "error": "EditPlan inválido: : Value error, cada op puede aparecer una sola vez; repetidas: ['crop']",
+              "output": "{\n  \"schema_version\": \"1.0\",\n  \"operations\": [\n    {\n      \"op\": \"resize\",\n      \"width\": 1080,\n      \"height\": 1080,\n      \"fit\": \"exact\"\n    },\n    {\n      \"op\": \"crop\",\n      \"aspect_ratio\": \"1:1\",\n      \"anchor\": \"center\"\n    },\n    {\n      \"op\": \"crop\",\n      \"aspect_ratio\": \"9:16\",\n      \"anchor\": \"center\"\n    },\n    {\n      \"op\": \"crop\",\n      \"aspect_ratio\": \"16:9\",\n      \"anchor\": \"center\"\n    },\n    {\n      \"op\": \"crop\",\n      \"aspect_ratio\": \"4:5\",\n      \"anchor\": \"center\"\n    },\n    {\n      \"op\": \"crop\",\n      \"aspect_ratio\": \"5:4\",\n      \"anchor\": \"center\"\n    },\n    {\n      \"op\": \"crop\",\n      \"aspect_ratio\": \"3:2\",\n      \"anchor\": \"center\"\n    },\n    {\n      \"op\": \"crop\",\n      \"aspect_ratio\": \"2:3\",\n      \"anchor\": \"center\"\n    }\n  ],\n  \"export\": {\n    \"format\": \"jpeg\",\n    \"quality\": 100\n  },\n  \"explanation\": \"La imagen se redimensionará a 1080x1080 y se exportará en formato JPG con calidad máxima. Se realizarán ajustes de recorte para diferentes aspectos.\",\n  \"unsupported\": [],\n  \"clarification\": \"\"\n}"
+            },
+            {
+              "wall_s": 36.761,
+              "prompt_tokens": 387,
+              "prompt_ms": 2632,
+              "gen_tokens": 172,
+              "gen_tok_s": 5.0,
+              "json_ok": true,
+              "valid": true,
+              "error": null,
+              "output": "{\n  \"schema_version\": \"1.0\",\n  \"operations\": [\n    {\n      \"op\": \"resize\",\n      \"width\": 1080,\n      \"height\": 1080,\n      \"fit\": \"exact\"\n    },\n    {\n      \"op\": \"crop\",\n      \"aspect_ratio\": \"1:1\",\n      \"anchor\": \"center\"\n    }\n  ],\n  \"export\": {\n    \"format\": \"jpeg\",\n    \"quality\": 100\n  },\n  \"explanation\": \"La imagen se redimensionará a 1080x1080 y se exportará en formato JPG con calidad máxima. Se realizará un ajuste de recorte para el aspecto 1:1.\",\n  \"unsupported\": [],\n  \"clarification\": \"\"\n}"
+            }
+          ],
+          "fails": [],
+          "ops": [
+            "resize",
+            "crop"
+          ],
+          "unsupported": false,
+          "clarification": ""
+        }
+      ]
+    }
+  },
+  "server_rss_gb": 4.8,
+  "server_log_memory": [
+    "0.01.073.063 I load_tensors: offloaded 0/37 layers to GPU",
+    "0.01.073.068 I load_tensors:   CPU_Mapped model buffer size =  4789.19 MiB",
+    "0.01.120.121 I llama_kv_cache:        CPU KV buffer size =   288.00 MiB",
+    "0.01.157.266 I sched_reserve:    Vulkan0 compute buffer size =   115.00 MiB",
+    "0.01.157.276 I sched_reserve: Vulkan_Host compute buffer size =    34.02 MiB"
+  ]
+}
