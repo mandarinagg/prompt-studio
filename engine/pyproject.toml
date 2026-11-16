@@ -1,0 +1,35 @@
+[project]
+name = "pstudio"
+version = "0.1.0"
+description = "Motor de PROMPT STUDIO: edición de fotos/videos guiada por planes de edición validados."
+license = "MIT"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[project.scripts]
+pstudio = "pstudio:main"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.8"]
+# Solo para spikes de M0 (engine/spikes/); no son dependencias del paquete.
+spike = [
+    "numpy>=2",
+    "pillow>=11",
+    "opencv-python-headless>=4.10",
+    "pyvips[binary]>=2.2",
+    "psutil>=6",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,516 @@
+{
+  "env": {
+    "python": "3.12.16",
+    "numpy": "2.5.5",
+    "pillow": "13.0.0",
+    "opencv": "5.0.0",
+    "libvips": "8.18.7",
+    "cpu": "AMD64 Family 23 Model 113 Stepping 0, AuthenticAMD"
+  },
+  "rows": [
+    {
+      "backend": "pillow",
+      "image": "candle-lowlight",
+      "open_proxy": {
+        "median_ms": 279.6,
+        "p90_ms": 283.1,
+        "min_ms": 276.2,
+        "rounds": 5
+      },
+      "preview_1op": {
+        "median_ms": 52.6,
+        "p90_ms": 53.0,
+        "min_ms": 51.9,
+        "rounds": 15
+      },
+      "preview_4op": {
+        "median_ms": 319.4,
+        "p90_ms": 325.3,
+        "min_ms": 316.7,
+        "rounds": 15
+      },
+      "preview_10op": {
+        "median_ms": 728.2,
+        "p90_ms": 743.7,
+        "min_ms": 714.2,
+        "rounds": 15
+      },
+      "export_4op": {
+        "median_ms": 4060.4,
+        "p90_ms": 4489.5,
+        "min_ms": 4033.1,
+        "rounds": 3
+      },
+      "export_10op": {
+        "median_ms": 6840.7,
+        "p90_ms": 7540.3,
+        "min_ms": 6779.9,
+        "rounds": 3
+      },
+      "export_bytes": 4565730,
+      "peak_mem_mb": 1900
+    },
+    {
+      "backend": "opencv",
+      "image": "candle-lowlight",
+      "open_proxy": {
+        "median_ms": 166.7,
+        "p90_ms": 168.6,
+        "min_ms": 165.6,
+        "rounds": 5
+      },
+      "preview_1op": {
+        "median_ms": 56.9,
+        "p90_ms": 60.4,
+        "min_ms": 56.0,
+        "rounds": 15
+      },
+      "preview_4op": {
+        "median_ms": 136.4,
+        "p90_ms": 137.3,
+        "min_ms": 133.7,
+        "rounds": 15
+      },
+      "preview_10op": {
+        "median_ms": 248.2,
+        "p90_ms": 251.6,
+        "min_ms": 246.2,
+        "rounds": 15
+      },
+      "export_4op": {
+        "median_ms": 1624.4,
+        "p90_ms": 1658.2,
+        "min_ms": 1622.2,
+        "rounds": 3
+      },
+      "export_10op": {
+        "median_ms": 2964.9,
+        "p90_ms": 2972.3,
+        "min_ms": 2960.1,
+        "rounds": 3
+      },
+      "export_bytes": 4565939,
+      "peak_mem_mb": 1265
+    },
+    {
+      "backend": "pyvips",
+      "image": "candle-lowlight",
+      "open_proxy": {
+        "median_ms": 221.4,
+        "p90_ms": 276.8,
+        "min_ms": 213.8,
+        "rounds": 5
+      },
+      "preview_1op": {
+        "median_ms": 11.2,
+        "p90_ms": 14.9,
+        "min_ms": 8.9,
+        "rounds": 15
+      },
+      "preview_4op": {
+        "median_ms": 88.4,
+        "p90_ms": 98.8,
+        "min_ms": 58.7,
+        "rounds": 15
+      },
+      "preview_10op": {
+        "median_ms": 149.4,
+        "p90_ms": 174.2,
+        "min_ms": 138.8,
+        "rounds": 15
+      },
+      "export_4op": {
+        "median_ms": 776.3,
+        "p90_ms": 842.5,
+        "min_ms": 752.5,
+        "rounds": 3
+      },
+      "export_10op": {
+        "median_ms": 1512.6,
+        "p90_ms": 1571.4,
+        "min_ms": 1444.7,
+        "rounds": 3
+      },
+      "export_bytes": 5535738,
+      "peak_mem_mb": 288
+    },
+    {
+      "backend": "pillow",
+      "image": "starry-night-noise",
+      "open_proxy": {
+        "median_ms": 397.5,
+        "p90_ms": 409.6,
+        "min_ms": 394.6,
+        "rounds": 5
+      },
+      "preview_1op": {
+        "median_ms": 57.1,
+        "p90_ms": 58.9,
+        "min_ms": 54.1,
+        "rounds": 15
+      },
+      "preview_4op": {
+        "median_ms": 367.4,
+        "p90_ms": 377.2,
+        "min_ms": 360.3,
+        "rounds": 15
+      },
+      "preview_10op": {
+        "median_ms": 720.0,
+        "p90_ms": 724.6,
+        "min_ms": 708.5,
+        "rounds": 15
+      },
+      "export_4op": {
+        "median_ms": 4224.2,
+        "p90_ms": 4602.3,
+        "min_ms": 4220.9,
+        "rounds": 3
+      },
+      "export_10op": {
+        "median_ms": 7514.0,
+        "p90_ms": 7847.1,
+        "min_ms": 7495.0,
+        "rounds": 3
+      },
+      "export_bytes": 11802909,
+      "peak_mem_mb": 1900
+    },
+    {
+      "backend": "opencv",
+      "image": "starry-night-noise",
+      "open_proxy": {
+        "median_ms": 275.0,
+        "p90_ms": 281.0,
+        "min_ms": 274.7,
+        "rounds": 5
+      },
+      "preview_1op": {
+        "median_ms": 56.5,
+        "p90_ms": 57.1,
+        "min_ms": 55.9,
+        "rounds": 15
+      },
+      "preview_4op": {
+        "median_ms": 150.9,
+        "p90_ms": 165.6,
+        "min_ms": 136.9,
+        "rounds": 15
+      },
+      "preview_10op": {
+        "median_ms": 284.9,
+        "p90_ms": 294.3,
+        "min_ms": 252.2,
+        "rounds": 15
+      },
+      "export_4op": {
+        "median_ms": 2084.2,
+        "p90_ms": 2086.2,
+        "min_ms": 1937.7,
+        "rounds": 3
+      },
+      "export_10op": {
+        "median_ms": 3546.4,
+        "p90_ms": 3548.5,
+        "min_ms": 3475.0,
+        "rounds": 3
+      },
+      "export_bytes": 11803088,
+      "peak_mem_mb": 1265
+    },
+    {
+      "backend": "pyvips",
+      "image": "starry-night-noise",
+      "open_proxy": {
+        "median_ms": 330.0,
+        "p90_ms": 330.8,
+        "min_ms": 328.6,
+        "rounds": 5
+      },
+      "preview_1op": {
+        "median_ms": 15.1,
+        "p90_ms": 18.0,
+        "min_ms": 10.2,
+        "rounds": 15
+      },
+      "preview_4op": {
+        "median_ms": 79.0,
+        "p90_ms": 91.8,
+        "min_ms": 68.2,
+        "rounds": 15
+      },
+      "preview_10op": {
+        "median_ms": 171.3,
+        "p90_ms": 210.6,
+        "min_ms": 153.7,
+        "rounds": 15
+      },
+      "export_4op": {
+        "median_ms": 1085.3,
+        "p90_ms": 1159.1,
+        "min_ms": 1057.6,
+        "rounds": 3
+      },
+      "export_10op": {
+        "median_ms": 1894.0,
+        "p90_ms": 1941.2,
+        "min_ms": 1851.1,
+        "rounds": 3
+      },
+      "export_bytes": 15567471,
+      "peak_mem_mb": 306
+    },
+    {
+      "backend": "pillow",
+      "image": "backlit-tree",
+      "open_proxy": {
+        "median_ms": 516.0,
+        "p90_ms": 586.0,
+        "min_ms": 514.8,
+        "rounds": 5
+      },
+      "preview_1op": {
+        "median_ms": 57.4,
+        "p90_ms": 58.9,
+        "min_ms": 55.1,
+        "rounds": 15
+      },
+      "preview_4op": {
+        "median_ms": 360.7,
+        "p90_ms": 366.4,
+        "min_ms": 353.9,
+        "rounds": 15
+      },
+      "preview_10op": {
+        "median_ms": 643.0,
+        "p90_ms": 724.9,
+        "min_ms": 632.0,
+        "rounds": 15
+      },
+      "export_4op": {
+        "median_ms": 9931.5,
+        "p90_ms": 10145.8,
+        "min_ms": 9412.9,
+        "rounds": 3
+      },
+      "export_10op": {
+        "median_ms": 14648.5,
+        "p90_ms": 15216.5,
+        "min_ms": 14304.0,
+        "rounds": 3
+      },
+      "export_bytes": 12942966,
+      "peak_mem_mb": 3538
+    },
+    {
+      "backend": "opencv",
+      "image": "backlit-tree",
+      "open_proxy": {
+        "median_ms": 460.1,
+        "p90_ms": 477.4,
+        "min_ms": 453.5,
+        "rounds": 5
+      },
+      "preview_1op": {
+        "median_ms": 59.6,
+        "p90_ms": 68.9,
+        "min_ms": 58.6,
+        "rounds": 15
+      },
+      "preview_4op": {
+        "median_ms": 148.0,
+        "p90_ms": 156.9,
+        "min_ms": 144.0,
+        "rounds": 15
+      },
+      "preview_10op": {
+        "median_ms": 265.7,
+        "p90_ms": 286.3,
+        "min_ms": 249.3,
+        "rounds": 15
+      },
+      "export_4op": {
+        "median_ms": 3525.2,
+        "p90_ms": 3555.3,
+        "min_ms": 3470.4,
+        "rounds": 3
+      },
+      "export_10op": {
+        "median_ms": 6989.7,
+        "p90_ms": 7019.6,
+        "min_ms": 6073.6,
+        "rounds": 3
+      },
+      "export_bytes": 12944170,
+      "peak_mem_mb": 2329
+    },
+    {
+      "backend": "pyvips",
+      "image": "backlit-tree",
+      "open_proxy": {
+        "median_ms": 539.7,
+        "p90_ms": 580.1,
+        "min_ms": 517.8,
+        "rounds": 5
+      },
+      "preview_1op": {
+        "median_ms": 12.1,
+        "p90_ms": 16.0,
+        "min_ms": 11.2,
+        "rounds": 15
+      },
+      "preview_4op": {
+        "median_ms": 101.1,
+        "p90_ms": 131.2,
+        "min_ms": 78.9,
+        "rounds": 15
+      },
+      "preview_10op": {
+        "median_ms": 165.2,
+        "p90_ms": 187.9,
+        "min_ms": 152.1,
+        "rounds": 15
+      },
+      "export_4op": {
+        "median_ms": 1911.0,
+        "p90_ms": 2016.8,
+        "min_ms": 1874.8,
+        "rounds": 3
+      },
+      "export_10op": {
+        "median_ms": 3723.0,
+        "p90_ms": 3737.4,
+        "min_ms": 3660.2,
+        "rounds": 3
+      },
+      "export_bytes": 21357246,
+      "peak_mem_mb": 326
+    },
+    {
+      "backend": "pillow",
+      "image": "product-white",
+      "open_proxy": {
+        "median_ms": 280.3,
+        "p90_ms": 295.5,
+        "min_ms": 264.7,
+        "rounds": 5
+      },
+      "preview_1op": {
+        "median_ms": 49.6,
+        "p90_ms": 50.8,
+        "min_ms": 48.3,
+        "rounds": 15
+      },
+      "preview_4op": {
+        "median_ms": 293.7,
+        "p90_ms": 309.3,
+        "min_ms": 286.2,
+        "rounds": 15
+      },
+      "preview_10op": {
+        "median_ms": 592.2,
+        "p90_ms": 611.3,
+        "min_ms": 568.4,
+        "rounds": 15
+      },
+      "export_4op": {
+        "median_ms": 11720.9,
+        "p90_ms": 22943.8,
+        "min_ms": 11587.5,
+        "rounds": 3
+      },
+      "export_10op": {
+        "median_ms": 32295.8,
+        "p90_ms": 40064.3,
+        "min_ms": 28001.8,
+        "rounds": 3
+      },
+      "export_bytes": 3875751,
+      "peak_mem_mb": 4457
+    },
+    {
+      "backend": "opencv",
+      "image": "product-white",
+      "open_proxy": {
+        "median_ms": 329.8,
+        "p90_ms": 345.1,
+        "min_ms": 317.6,
+        "rounds": 5
+      },
+      "preview_1op": {
+        "median_ms": 100.2,
+        "p90_ms": 106.0,
+        "min_ms": 91.3,
+        "rounds": 15
+      },
+      "preview_4op": {
+        "median_ms": 231.6,
+        "p90_ms": 264.0,
+        "min_ms": 196.9,
+        "rounds": 15
+      },
+      "preview_10op": {
+        "median_ms": 468.4,
+        "p90_ms": 524.5,
+        "min_ms": 405.1,
+        "rounds": 15
+      },
+      "export_4op": {
+        "median_ms": 4700.8,
+        "p90_ms": 7291.0,
+        "min_ms": 4207.0,
+        "rounds": 3
+      },
+      "export_10op": {
+        "median_ms": 11854.0,
+        "p90_ms": 12395.9,
+        "min_ms": 11533.3,
+        "rounds": 3
+      },
+      "export_bytes": 3875927,
+      "peak_mem_mb": 2961
+    },
+    {
+      "backend": "pyvips",
+      "image": "product-white",
+      "open_proxy": {
+        "median_ms": 318.7,
+        "p90_ms": 335.4,
+        "min_ms": 316.3,
+        "rounds": 5
+      },
+      "preview_1op": {
+        "median_ms": 17.9,
+        "p90_ms": 25.0,
+        "min_ms": 13.9,
+        "rounds": 15
+      },
+      "preview_4op": {
+        "median_ms": 120.6,
+        "p90_ms": 143.0,
+        "min_ms": 86.9,
+        "rounds": 15
+      },
+      "preview_10op": {
+        "median_ms": 186.2,
+        "p90_ms": 214.4,
+        "min_ms": 165.1,
+        "rounds": 15
+      },
+      "export_4op": {
+        "median_ms": 1993.4,
+        "p90_ms": 2022.1,
+        "min_ms": 1954.6,
+        "rounds": 3
+      },
+      "export_10op": {
+        "median_ms": 3763.6,
+        "p90_ms": 3851.5,
+        "min_ms": 3675.5,
+        "rounds": 3
+      },
+      "export_bytes": 6009187,
+      "peak_mem_mb": 319
+    }
+  ]
+}
