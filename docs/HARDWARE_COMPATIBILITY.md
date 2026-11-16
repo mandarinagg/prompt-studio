@@ -10,14 +10,16 @@
 | Disco C: | 56 GB libres | Ajustado: caché y modelos en ruta configurable |
 | Disco F: | 47 GB libres | Candidato para `models/` y `cache/` |
 
-## Herramientas (estado 2026-11-12)
+## Herramientas (estado 2026-11-15, issue #1)
 | Herramienta | Estado |
 |---|---|
 | git, gh | Instalados |
 | Node 26 / npm 11 / pnpm 10 | Instalados |
-| Python 3.15 | Instalado, **demasiado nuevo** para wheels de ML → usar 3.12 vía `uv` |
-| Rust / cargo | **Falta** (requerido por Tauri) |
-| FFmpeg | **Falta** |
+| Python 3.15 (sistema) | Sin tocar. Demasiado nuevo para wheels de ML |
+| Python 3.12 | Gestionado por `uv` (`uv python install 3.12 --no-bin`), aislado del sistema |
+| Rust 1.100.0 / cargo | Instalado vía rustup (`stable-x86_64-pc-windows-msvc`) |
+| VS 2022 Build Tools (C++) | Instalado (requerido por Rust/MSVC y Tauri) |
+| FFmpeg n9.0.2 **LGPL** | BtbN/FFmpeg-Builds, sin x264/x265; `h264_amf`, `hevc_amf`, `av1_amf` listados |
 
 ## Backends de aceleración en esta GPU
 | Uso | Backend recomendado | Notas |
