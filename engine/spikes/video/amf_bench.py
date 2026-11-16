@@ -61,12 +61,14 @@ def make_source() -> None:
         return
     WORK.mkdir(parents=True, exist_ok=True)
     frames = FPS * DURATION_S // 4  # 150 cuadros por foto
+    cx, cy = "iw/2-(iw/zoom/2)", "ih/2-(ih/zoom/2)"  # centrado
+    wide = "scale=3840:-2"
     clips = [  # (foto, prefiltro, zoom, x, y)
-        ("starry-night-noise", "scale=3840:-2", "1+0.0015*on", "iw/2-(iw/zoom/2)", "ih/2-(ih/zoom/2)"),
-        ("warm-restaurant", "scale=3840:-2", "1.2", "on*4", "ih/2-(ih/zoom/2)"),
-        ("backlit-tree", "scale=3840:-2", "1.4-0.0015*on", "iw/2-(iw/zoom/2)", "ih/2-(ih/zoom/2)"),
-        ("stage-portrait", "scale=3840:-2,crop=3840:2160:0:1400", "1.1", "iw/2-(iw/zoom/2)", "on"),
-    ]  # fmt: skip
+        ("starry-night-noise", wide, "1+0.0015*on", cx, cy),
+        ("warm-restaurant", wide, "1.2", "on*4", cy),
+        ("backlit-tree", wide, "1.4-0.0015*on", cx, cy),
+        ("stage-portrait", f"{wide},crop=3840:2160:0:1400", "1.1", cx, "on"),
+    ]
     inputs, chains = [], []
     for i, (photo, pre, z, x, y) in enumerate(clips):
         inputs += ["-i", str(PHOTOS / f"{photo}.jpg")]  # una sola imagen: zoompan genera d cuadros
