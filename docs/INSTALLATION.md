@@ -1,19 +1,28 @@
 # Instalación (entorno de desarrollo, Windows)
 
-Faltan en el equipo actual: **Rust**, **FFmpeg**, **uv/Python 3.12**.
+Probado en Windows 11 (2026-11-15). Ninguno de estos pasos cambia el `python` del sistema.
 
 ```powershell
-# Rust (requerido por Tauri 2) + WebView2 ya viene con Windows 11
-winget install Rustlang.Rustup
-# Build Tools de C++ si no están: winget install Microsoft.VisualStudio.2022.BuildTools
+# Rust (requerido por Tauri 2); WebView2 ya viene con Windows 11
+winget install --id Rustlang.Rustup -e
+# Build Tools de C++ (MSVC + Windows SDK, ~6-7 GB), requeridas por Rust en Windows
+winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--wait --passive --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
 
-# uv y Python 3.12 para el engine
+# uv y Python 3.12 para el engine (aislado: no reemplaza el python del sistema)
 winget install astral-sh.uv
-uv python install 3.12
+uv python install 3.12 --no-bin
 
-# FFmpeg — para desarrollo cualquier build sirve; para distribuir usar build LGPL (ver ADR-0004)
-winget install Gyan.FFmpeg
-ffmpeg -hide_banner -encoders | findstr amf   # verificar encoders AMD
+# FFmpeg LGPL (ADR-0004): build estable de BtbN, verificado por checksum
+gh release download latest -R BtbN/FFmpeg-Builds -p "ffmpeg-n9.0-latest-win64-lgpl-9.0.zip" -p checksums.sha256
+#   verificar sha256, descomprimir en %LOCALAPPDATA%\Programs\ffmpeg-lgpl y agregar su bin\ al PATH de usuario
+```
+
+Verificación:
+```powershell
+rustc --version
+ffmpeg -hide_banner -buildconf | findstr "gpl x264"    # no debe aparecer --enable-gpl
+ffmpeg -hide_banner -encoders | findstr amf             # h264_amf / hevc_amf
+uv run --no-project --python 3.12 python -V             # Python 3.12.x
 ```
 
 Engine (desde M1):
