@@ -1,6 +1,6 @@
 # ADR-0005 — Librería de imagen: pyvips (libvips) como motor de píxeles
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado (2026-11-16)
 - **Fecha:** 2026-11-16
 - **Evidencia:** spike #2, [`engine/spikes/imaging/RESULTS.md`](../../engine/spikes/imaging/RESULTS.md)
 

@@ -15,13 +15,13 @@ se recalibran al cerrar M0 con datos reales de velocidad.
 | **M7 — Avanzado** | Máscaras, curvas, RAW, tracking, plantillas | L | v0.5+ |
 
 ## M0 — Fundaciones (detalle)
-- [ ] Instalar Rust, FFmpeg (build LGPL), uv + Python 3.12.
-- [ ] Spike: pyvips vs OpenCV vs Pillow — tiempo de preview/export en 24 MP.
+- [x] Instalar Rust, FFmpeg (build LGPL), uv + Python 3.12. (#1)
+- [x] Spike: pyvips vs OpenCV vs Pillow — tiempo de preview/export en 24 MP. (#2 → ADR-0005: pyvips)
 - [ ] Spike: sidecar Python dentro de Tauri (PyInstaller) — tamaño y arranque.
 - [ ] Spike: FFmpeg AMF (h264_amf/hevc_amf) en la RX 6600 XT.
 - [ ] Spike: llama.cpp Vulkan + JSON Schema con modelo 7–8B Q4 — latencia y validez.
-- [ ] Aprobar ADR-0001…0004.
-- [ ] Fixtures de prueba con licencia libre (fotos 24 MP, contraluz, interior cálido, ruido).
+- [ ] Aprobar ADR-0001…0005. (0002–0005 aceptados 2026-11-16; 0001 pendiente del spike #3)
+- [x] Fixtures de prueba con licencia libre (fotos 24 MP, contraluz, interior cálido, ruido).
 
 ## Fuera de roadmap hasta nuevo aviso
 Ver "Fuera de alcance" en `PRODUCT_SPEC.md`.
