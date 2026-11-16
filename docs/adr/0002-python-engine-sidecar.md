@@ -12,5 +12,5 @@ se exporta JSON Schema y se generan tipos TS. Librerías candidatas: pyvips, Ope
 Ecosistema de imagen/ML maduro, iteración rápida, testeable por Claude Code desde terminal.
 
 ## Riesgos
-Empaquetado (PyInstaller/Nuitka) y tiempo de arranque → spike en M0. Si el rendimiento de
+Empaquetado y tiempo de arranque → resuelto en el spike #3: ver ADR-0006 (Python embebible). Si el rendimiento de
 preview no alcanza, mover ops calientes a Rust/numba sin cambiar el contrato.

@@ -4,19 +4,20 @@ version = "0.1.0"
 description = "Motor de PROMPT STUDIO: edición de fotos/videos guiada por planes de edición validados."
 license = "MIT"
 requires-python = ">=3.12,<3.13"
-dependencies = []
+dependencies = ["pyvips[binary]>=3.2", "numpy>=2"]  # ADR-0005
 
 [project.scripts]
 pstudio = "pstudio:main"
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.8"]
+package = [
+    "pyinstaller>=6.22.3",
+]
 # Solo para spikes de M0 (engine/spikes/); no son dependencias del paquete.
 spike = [
-    "numpy>=2",
     "pillow>=11",
     "opencv-python-headless>=4.10",
-    "pyvips[binary]>=2.2",
     "psutil>=6",
 ]
 
