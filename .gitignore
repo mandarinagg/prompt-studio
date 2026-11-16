@@ -47,3 +47,7 @@ models/
 # OS
 Thumbs.db
 .DS_Store
+
+# Test fixtures downloaded by tests/fixtures/fetch_fixtures.py
+tests/fixtures/photos/
+*.part
