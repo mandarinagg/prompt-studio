@@ -38,6 +38,7 @@ app/src-tauri/target/
 *.mp3
 !docs/**/*.png
 !tests/fixtures/tiny/**
+!app/src-tauri/icons/**
 
 # Project caches / models
 cache/

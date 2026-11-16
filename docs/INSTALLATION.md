@@ -2,6 +2,10 @@
 
 Probado en Windows 11 (2026-11-15). Ninguno de estos pasos cambia el `python` del sistema.
 
+> **Smart App Control tiene que estar desactivado en la máquina de desarrollo**: bloquea los
+> build scripts de Cargo y no se puede compilar Tauri (`os error 4551`). Seguridad de Windows →
+> Control de aplicaciones y navegador → Smart App Control → Desactivado. Ver ADR-0001.
+
 ```powershell
 # Rust (requerido por Tauri 2); WebView2 ya viene con Windows 11
 winget install --id Rustlang.Rustup -e
@@ -32,9 +36,12 @@ uv sync
 uv run pytest
 ```
 
-App (desde M3):
+App:
 ```powershell
-cd app
+cd engine
+uv run python packaging/build_embed.py   # runtime del engine (python.org embebible + pstudio)
+cd ../app
 pnpm install
-pnpm tauri dev
+pnpm tauri dev                           # desarrollo
+pnpm tauri build                         # instalador NSIS en src-tauri/target/release/bundle/nsis
 ```
