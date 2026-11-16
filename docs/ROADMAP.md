@@ -18,7 +18,7 @@ se recalibran al cerrar M0 con datos reales de velocidad.
 - [x] Instalar Rust, FFmpeg (build LGPL), uv + Python 3.12. (#1)
 - [x] Spike: pyvips vs OpenCV vs Pillow — tiempo de preview/export en 24 MP. (#2 → ADR-0005: pyvips)
 - [x] Spike: sidecar Python dentro de Tauri — tamaño y arranque. (#3 → ADR-0006: Python embebible; instalador 23.7 MB, arranque < 1 s)
-- [ ] Spike: FFmpeg AMF (h264_amf/hevc_amf) en la RX 6600 XT.
+- [x] Spike: FFmpeg AMF (h264_amf/hevc_amf) en la RX 6600 XT. (#4: ~10× tiempo real, calidad ≈ OpenH264; sin AV1 por hardware)
 - [ ] Spike: llama.cpp Vulkan + JSON Schema con modelo 7–8B Q4 — latencia y validez.
 - [x] Aprobar ADR-0001…0006. (aceptados 2026-11-16)
 - [x] Fixtures de prueba con licencia libre (fotos 24 MP, contraluz, interior cálido, ruido).
