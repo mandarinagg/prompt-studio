@@ -108,6 +108,12 @@ def handle_line(line: str) -> dict[str, Any] | None:
 
 def serve(stdin: IO[str] | None = None, stdout: IO[str] | None = None) -> None:
     """Bucle principal: lee hasta EOF (la app cierra stdin para apagar el engine)."""
+    if stdin is None:
+        # El protocolo es UTF-8. En Windows, con pipes, Python usa la página de códigos ANSI
+        # (cp1252): rutas como "Año/日本.jpg" llegaban rotas y daban "no existe el archivo".
+        sys.stdin.reconfigure(encoding="utf-8", errors="replace")
+    if stdout is None:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     stdin = stdin or sys.stdin
     out = stdout or sys.stdout
     if stdout is None:
