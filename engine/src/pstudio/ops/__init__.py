@@ -7,6 +7,7 @@ desde afuera ni de ejecutar código del plan (regla 1 de CLAUDE.md).
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 
 import pyvips
 
@@ -38,6 +39,83 @@ def apply_op(img: pyvips.Image, op: Operation, scale: float = 1.0) -> pyvips.Ima
     return fn(img, op, scale=scale) if op.op in SPATIAL else fn(img, op)
 
 
+# ------------------------------------------------------------------ etapas del render
+@dataclass(frozen=True)
+class Stage:
+    """Un paso del render: un grupo de curvas tonales consecutivas (una sola LUT), una op
+    automática (mide la copia de análisis) o cualquier otra op sola."""
+
+    ops: tuple[Operation, ...]
+
+    @property
+    def is_auto(self) -> bool:
+        return self.ops[0].op in color.AUTO
+
+
+@dataclass(frozen=True)
+class RenderState:
+    """La imagen entre dos etapas, más la copia chica que miden las ops automáticas."""
+
+    image: pyvips.Image
+    scale: float
+    analysis: pyvips.Image | None = None  # reduce_for_analysis(entrada) tras las mismas etapas
+    analysis_scale: float = 0.0
+
+
+def plan_stages(plan: EditPlan) -> list[Stage]:
+    """Etapas del plan en orden: sin las ops neutras y con las curvas consecutivas juntas."""
+    stages: list[Stage] = []
+    curves: list[Operation] = []
+    for op in plan.operations:
+        if op.is_noop():
+            continue
+        if op.op in tonal.CURVES:
+            curves.append(op)
+            continue
+        if curves:
+            stages.append(Stage(tuple(curves)))
+            curves = []
+        stages.append(Stage((op,)))
+    if curves:
+        stages.append(Stage(tuple(curves)))
+    return stages
+
+
+def auto_ahead(stages: list[Stage]) -> list[bool]:
+    """`[i]` = hay alguna op automática en `stages[i:]` (largo n + 1; el último es False)."""
+    ahead = [False] * (len(stages) + 1)
+    for i in range(len(stages) - 1, -1, -1):
+        ahead[i] = ahead[i + 1] or stages[i].is_auto
+    return ahead
+
+
+def start_state(img: pyvips.Image, scale: float, with_analysis: bool) -> RenderState:
+    if not with_analysis:
+        return RenderState(img, scale)
+    small = reduce_for_analysis(img).copy_memory()
+    return RenderState(img, scale, small, scale * small.width / img.width)
+
+
+def run_stage(stage: Stage, state: RenderState, keep_analysis: bool) -> RenderState:
+    """Aplica una etapa (perezosa: no materializa `image`). La copia de análisis se sigue
+    calculando solo si `keep_analysis` (queda alguna op automática más adelante)."""
+    first = stage.ops[0]
+    fn: Callable[[pyvips.Image, float], pyvips.Image]
+    if first.op in tonal.CURVES:
+        curve = compose([tonal.CURVES[o.op](o) for o in stage.ops])
+        fn = lambda image, _s: apply_tone_curve(image, curve)  # noqa: E731
+    elif first.op in color.AUTO:
+        stats = analyze(state.analysis)
+        fn = lambda image, _s: color.AUTO[first.op](image, first, stats)  # noqa: E731
+    else:
+        fn = lambda image, s: apply_op(image, first, s)  # noqa: E731
+    image = fn(state.image, state.scale)
+    if not keep_analysis or state.analysis is None:
+        return RenderState(image, state.scale)
+    analysis = fn(state.analysis, state.analysis_scale).copy_memory()
+    return RenderState(image, state.scale, analysis, state.analysis_scale)
+
+
 def apply_plan(img: pyvips.Image, plan: EditPlan, scale: float = 1.0) -> pyvips.Image:
     """Aplica las ops en el orden del plan (las neutras no hacen nada).
 
@@ -47,37 +125,14 @@ def apply_plan(img: pyvips.Image, plan: EditPlan, scale: float = 1.0) -> pyvips.
     - Las curvas tonales consecutivas se componen en una sola LUT: el resultado es el mismo que
       aplicarlas de a una (salvo error de interpolación < 1e-4), con una sola pasada por píxel.
     - Si hay ops automáticas, se mantiene una copia chica de la imagen (la de analysis.py) que
-      pasa por las mismas ops; cada op automática mide esa copia. Así medir no obliga a
-      calcular (y decodificar) la imagen entera una vez por op automática.
+      pasa por las mismas ops hasta la última automática; cada op automática mide esa copia.
+      Así medir no obliga a calcular (y decodificar) la imagen entera una vez por op automática.
+
+    La preview con caché (render/preview.py) recorre las mismas etapas: da los mismos bytes.
     """
-    ops = [op for op in plan.operations if not op.is_noop()]
-    proxy = proxy_scale = None
-    if any(o.op in color.AUTO for o in ops):
-        proxy = reduce_for_analysis(img).copy_memory()
-        proxy_scale = scale * proxy.width / img.width
-    pending: list = []
-
-    def run(stage: Callable[[pyvips.Image, float], pyvips.Image]) -> None:
-        nonlocal img, proxy
-        img = stage(img, scale)
-        if proxy is not None:
-            proxy = stage(proxy, proxy_scale).copy_memory()
-
-    def flush() -> None:
-        if pending:
-            curve = compose(list(pending))
-            pending.clear()
-            run(lambda image, _s: apply_tone_curve(image, curve))
-
-    for op in ops:
-        if op.op in tonal.CURVES:
-            pending.append(tonal.CURVES[op.op](op))
-            continue
-        flush()
-        if op.op in color.AUTO:
-            stats = analyze(proxy)
-            run(lambda image, _s, op=op, stats=stats: color.AUTO[op.op](image, op, stats))
-        else:
-            run(lambda image, s, op=op: apply_op(image, op, s))
-    flush()
-    return img
+    stages = plan_stages(plan)
+    ahead = auto_ahead(stages)
+    state = start_state(img, scale, ahead[0])
+    for i, stage in enumerate(stages):
+        state = run_stage(stage, state, keep_analysis=ahead[i + 1])
+    return state.image

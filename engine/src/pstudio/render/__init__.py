@@ -1,4 +1,4 @@
-"""Render: decode/encode y (desde #11) aplicación de planes sobre imágenes en float32 lineal."""
+"""Render: decode/encode, aplicación de planes en float32 lineal y preview con caché (#31)."""
 
 from pstudio.render.io import (
     OriginalModifiedError,
@@ -8,12 +8,17 @@ from pstudio.render.io import (
     encode,
     sha256_file,
 )
+from pstudio.render.preview import PreviewCache, Proxy, make_proxy, render_preview
 
 __all__ = [
     "OriginalModifiedError",
     "OriginalProtectedError",
+    "PreviewCache",
+    "Proxy",
     "SourceInfo",
     "decode",
     "encode",
+    "make_proxy",
+    "render_preview",
     "sha256_file",
 ]
