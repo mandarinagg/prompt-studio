@@ -51,6 +51,38 @@ pstudio apply plan.json foto.jpg -o salida/
 - `--provider auto` usa el LLM local si está registrado y, si no, las reglas. Si el
   proveedor falla, cae a las reglas y avisa por stderr.
 
+## Proveedor `cloud` (#18): opt-in, solo texto
+Está en `engine/src/pstudio/prompting/cloud.py`. Usa Claude a través del SDK oficial de
+Anthropic, que es un extra opcional: `uv sync --extra cloud`.
+
+**Cómo se activa.** Está apagado por defecto y nunca entra en `--provider auto`. Para usarlo
+hacen falta las dos cosas:
+- `PSTUDIO_CLOUD=1`;
+- la clave en la variable de entorno `ANTHROPIC_API_KEY` (nunca en el repo).
+
+Sin eso, el pipeline usa las reglas y lo avisa.
+
+**Qué se envía.** Solo el pedido y los descriptores numéricos de la foto. No se envían la foto,
+su ruta ni su nombre de archivo. `pstudio plan --provider cloud` muestra por stderr el texto
+exacto antes de enviarlo.
+
+**Cómo pide el plan.**
+- Modelo `claude-opus-5-5` (se cambia con `PSTUDIO_CLOUD_MODEL`) con esfuerzo `low`: un plan
+  es una tarea corta.
+- La salida está restringida al JSON Schema del EditPlan (structured outputs). El esquema se
+  adapta a lo que acepta la API: sin `minimum`/`maximum` y con `oneOf` convertido en
+  `anyOf`. Los rangos los vuelve a validar el pipeline.
+- Ante una negativa por seguridad hay respaldo del lado del servidor
+  (`fallbacks: "default"`).
+
+**Errores.** Un error de red, de clave o de límite de pedidos se informa y se cae a las reglas.
+Una negativa o un plan inválido se reintentan una vez con el error como feedback, y después
+también se cae a las reglas.
+
+**Estado.** Los tests usan un cliente falso. Todavía **no se probó contra la API real**: en
+este equipo no hay credencial. La medición con `pstudio eval --provider cloud` queda pendiente
+de que haya una clave.
+
 ## Proveedor `rules` (#15)
 Está en `engine/src/pstudio/prompting/rules.py`. Funciona offline, es determinista y tarda
 ~1.5 ms por pedido (el máximo es 15 ms; el objetivo era < 50 ms). Es el respaldo garantizado:
