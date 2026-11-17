@@ -6,3 +6,6 @@
 - v0.1 no soporta RAW, HEIC, máscaras locales ni video.
 - El proveedor de reglas solo entiende prompts simples; los complejos necesitan LLM.
 - Los objetivos de rendimiento son hipótesis hasta cerrar M0.
+- Preview: con la caché incremental, mover la última op tarda 12–16 ms si es exposure, balance
+  de blancos o saturación, pero 40–160 ms si es vignette, vibrance, sharpen, una curva tonal o
+  denoise (proxy de 2048 px; objetivo < 30 ms). Ver MEDIA_PIPELINE.md, "Preview con caché".
