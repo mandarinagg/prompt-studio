@@ -14,6 +14,22 @@ Equivalencia de tamaños, de acá en adelante: **S ≈ 1–2 sesiones · M ≈ 3
   diferencia de M0 es código de producto con golden tests, y #11–#13 (18 ops) son lo más
   largo. Ya está hecho el armado del paquete (falta la CI de #8), hay un borrador del esquema
   (`engine/spikes/llm/edit_plan.py`) y pyvips está elegido con su rendimiento medido.
+### Cierre de M1 (2026-11-17)
+M1 cerró en **2 sesiones** (estimado: 3–4), con 9 PRs (#33–#41). Los dos últimos issues, la
+caché (#31) y la página de comparación, los hicieron subagentes en paralelo.
+- **Qué quedó:** las 18 ops del catálogo, `pstudio apply` con 6 presets y modo lote,
+  `pstudio analyze` y la caché de preview. Son 421 tests; las golden images son de 16 bits.
+- **Rendimiento:**
+  - El export de 24 MP con 10 ops tarda 2.7 s (objetivo < 3 s).
+  - El lote web de 8 fotos de 24–48 MP tarda 14.4 s.
+  - La preview de casi todas las ops queda bajo 150 ms. La de **denoise no** (≈ 280 ms).
+  - Al mover el slider de la última op de una cadena, la respuesta queda bajo 30 ms solo si
+    esa op es barata. Va como #42, en M3: es un tema de la app.
+- **Aprendizaje:** revisar cada op sobre fotos reales encontró 6 fallas que los tests de
+  propiedades no veían. Entre ellas: gray world invirtiendo colores, auto_exposure griseando
+  una foto de producto, una raya roja del denoise y vibrance sin efecto. Mantener esa revisión
+  visual para M2 (planes) y M3 (UI).
+
 - **M2 (M):** sube de riesgo. El spike #5 mostró ~75% de planes correctos con el LLM solo, así
   que el proveedor de reglas (#15) y los evals (#16) pesan más de lo previsto. Se mantiene en
   M, pero con #15 como camino crítico.
