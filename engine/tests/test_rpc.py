@@ -86,3 +86,36 @@ def test_cli_rpc_process_end_to_end():
         check=True,
     )
     assert json.loads(proc.stdout) == {"jsonrpc": "2.0", "id": 1, "result": "pong"}
+
+
+def test_cli_rpc_non_ascii_path(tmp_path):
+    # La app manda UTF-8 por el pipe; en Windows Python usa cp1252 en pipes si no se fuerza.
+    folder = tmp_path / "Año 2026 日本"
+    folder.mkdir()
+    photo = folder / "foto ñ.png"
+    pyvips.Image.black(8, 4).write_to_file(str(photo))
+    req = {"jsonrpc": "2.0", "id": 1, "method": "image.info", "params": {"path": str(photo)}}
+    proc = subprocess.run(
+        [sys.executable, "-I", "-m", "pstudio", "rpc"],
+        input=(json.dumps(req, ensure_ascii=False) + "\n").encode("utf-8"),
+        capture_output=True,
+        timeout=60,
+        check=True,
+    )
+    resp = json.loads(proc.stdout.decode("utf-8"))
+    assert resp["result"]["width"] == 8, resp
+
+
+def test_cli_rpc_survives_invalid_utf8():
+    # Bytes que no son UTF-8 no deben tirar el proceso: se responde error y se sigue leyendo.
+    data = b'{"jsonrpc":"2.0","id":1,"method":"\xff"}\n{"jsonrpc":"2.0","id":2,"method":"ping"}\n'
+    proc = subprocess.run(
+        [sys.executable, "-I", "-m", "pstudio", "rpc"],
+        input=data,
+        capture_output=True,
+        timeout=60,
+        check=True,
+    )
+    lines = [json.loads(x) for x in proc.stdout.decode("utf-8").splitlines()]
+    assert lines[0]["error"]["code"] == METHOD_NOT_FOUND
+    assert lines[1] == {"jsonrpc": "2.0", "id": 2, "result": "pong"}
