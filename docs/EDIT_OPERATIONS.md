@@ -88,6 +88,66 @@ nunca invierten el orden de los tonos.
   - Ambos dentro de los objetivos del spec (< 150 ms y < 3 s).
 - Pendiente: reglas del proveedor `rules` y evals (M2).
 
+## Implementación de las ops geométricas y de detalle (#13)
+`engine/src/pstudio/ops/geometry.py` y `engine/src/pstudio/ops/detail.py`.
+
+**Remuestreo.** Todo remuestreo (rotar, enderezar, cambiar tamaño) se hace en luz lineal y con
+alpha premultiplicado. Un damero blanco y negro reducido da gris 0.5 lineal, como en la
+realidad, y no el gris más oscuro que daría hacerlo en sRGB.
+
+**Escala preview/export.** Los radios y tamaños en píxeles se refieren a la imagen original.
+`apply_plan(img, plan, scale=…)` recibe cuántos píxeles del proxy hay por píxel original, y las
+ops espaciales escalan con ese número. Probado: la preview de un plan con crop, sharpen,
+denoise, vignette y resize, hecha sobre un proxy a 1/2, coincide con el export reducido
+(SSIM > 0.97).
+
+**Ops geométricas**
+- `crop`: `rect` en fracciones, o el rectángulo más grande con la proporción pedida, ubicado
+  según `anchor`. `subject_or_center` usa el punto de atención de libvips (bordes, piel,
+  saturación), medido sobre la imagen reducida: es determinista y da el mismo encuadre en
+  preview y en export. En el retrato de escenario, el 1:1 queda centrado en la cara.
+- `rotate`: sentido horario.
+  - Los múltiplos de 90° son exactos.
+  - Otros ángulos agrandan el lienzo y dejan las esquinas transparentes. En JPEG se aplanan
+    sobre blanco.
+- `straighten`: rota y recorta al rectángulo más grande con las proporciones originales.
+  Deja 2 px de margen (el alcance del kernel bicúbico): con 1 px quedaba un filo en el borde.
+- `resize`: Lanczos3.
+  - `contain` entra en la caja, `cover` la cubre y recorta al centro, `exact` deforma.
+  - Agranda si se lo piden.
+
+**Ops de detalle**
+- `sharpen`: máscara de enfoque sobre la luminancia perceptual (sin halos de color).
+  `amount` 100 = ganancia 2. Si el radio, escalado, queda por debajo de 0.3 px, no hace
+  nada: a esa escala no hay detalle para enfocar.
+- `denoise`: dos pasos.
+  - Primero difumina el ruido de color en Lab (a/b), hasta 3 px con `strength` 1.
+  - Después aplica un filtro guiado sobre la luminancia perceptual, que alisa las zonas
+    planas y respeta los bordes.
+  - En la foto nocturna de prueba saca el grano de color y no se come las estrellas.
+  - Con fuerza alta también alisa texturas finas de bajo contraste, como el papel de la
+    vela: es el costo normal de un denoise clásico. El denoise con IA queda para M6.
+  - Una primera versión difuminaba RGB − Y y dejaba una raya roja en los árboles contra el
+    cielo.
+- `vignette`: multiplica la luz por hasta ±2 EV en las esquinas.
+  - El efecto es elíptico (sigue la proporción de la foto) y arranca en
+    r = 0.9·`midpoint`/100.
+  - No depende de la resolución.
+
+**Rendimiento** (Ryzen 5 3600, foto de 24 MP; preview sobre un proxy de 2048 px)
+
+| Medición | Resultado | Objetivo del spec | Cumple |
+|---|---|---|---|
+| Preview de crop, rotate, straighten, resize, vignette | 14–47 ms | < 150 ms | sí |
+| Preview de sharpen | 112 ms | < 150 ms | sí |
+| Preview de denoise | **≈ 280 ms** | < 150 ms | **no** |
+| Export de 24 MP con 10 ops (straighten, crop, auto_exposure, 2 tonales, white_balance, vibrance, denoise, sharpen, vignette), con decode y JPEG | **2.7 s** | < 3 s | sí |
+
+- Para llegar a esos números, `denoise` materializa la imagen después del paso de color. Si
+  no, libvips recalculaba decode + Lab en cada tile de los desenfoques anidados, y el mismo
+  export tardaba 6.0 s.
+- Pendiente: la caché por op (#31), para que mover otro slider no recalcule el denoise.
+
 ## Export
 `preset` (original, high_quality, web, catalog_square, social_vertical, story_9x16), y
 opcionalmente `format` (jpeg, png, webp, tiff), `quality` (1–100), `color_space` (sRGB,
