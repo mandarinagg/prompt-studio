@@ -3,7 +3,7 @@
 Solo medios CC0 / dominio público. Generado desde `manifest.json` con
 `fetch_fixtures.py --sources`; no editar a mano.
 
-Descarga: `uv run --no-project --python 3.12 tests/fixtures/fetch_fixtures.py`
+Descarga: `uv run --no-project --python 3.14 tests/fixtures/fetch_fixtures.py`
 (los archivos quedan en `tests/fixtures/photos/`, ignorado por git).
 
 | id | Caso | Resolución | Licencia | Autor | Origen | SHA-256 |

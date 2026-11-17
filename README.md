@@ -28,7 +28,7 @@ cualquier parámetro, ves el antes/después y exportás. Sin tocar tus originale
 Detalle en [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Stack propuesto
-Tauri 2 + React + TypeScript · Engine Python 3.12 (`pstudio`, CLI + sidecar) · Pydantic ·
+Tauri 2 + React + TypeScript · Engine Python 3.14 (`pstudio`, CLI + sidecar) · Pydantic ·
 pyvips/OpenCV · FFmpeg · OpenTimelineIO · llama.cpp (Vulkan) opcional.
 Ver [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) y [`docs/adr/`](docs/adr/).
 

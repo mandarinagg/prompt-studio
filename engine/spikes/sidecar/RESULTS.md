@@ -66,7 +66,7 @@ build scripts sí corrió. Solución adoptada: el autor desactivó SAC en la má
 
 ## Limitaciones del spike
 - Python embebible **3.12.10**: la rama 3.12 ya solo recibe parches de seguridad, sin binarios
-  oficiales (el último embebible es el 3.12.10; uv usa 3.12.16). Hay que decidir si se pasa a 3.14.
+  oficiales (el último embebible es el 3.12.10; uv usa 3.12.16). **Resuelto en ADR-0008: 3.14.10.**
 - Sin firma de código, sin actualizaciones automáticas y sin prueba en un equipo limpio sin WebView2.
 - Un solo equipo.
 

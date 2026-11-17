@@ -80,7 +80,7 @@ el FFV1 solo ya da 117 fps. Medido aparte, desde YUV crudo en memoria:
 
 ## Reproducir
 ```powershell
-uv run --no-project --python 3.12 tests/fixtures/fetch_fixtures.py   # desde la raíz
+uv run --no-project --python 3.14 tests/fixtures/fetch_fixtures.py   # desde la raíz
 cd engine
 uv run python spikes/video/amf_bench.py --bitrates 6 12              # ~10 min
 ```

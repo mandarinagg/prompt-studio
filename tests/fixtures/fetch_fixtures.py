@@ -1,9 +1,9 @@
 """Descarga y verifica las fotos de prueba CC0 listadas en manifest.json.
 
 Uso (desde la raíz del repo):
-    uv run --no-project --python 3.12 tests/fixtures/fetch_fixtures.py            # descargar + verificar
-    uv run --no-project --python 3.12 tests/fixtures/fetch_fixtures.py --verify   # solo verificar
-    uv run --no-project --python 3.12 tests/fixtures/fetch_fixtures.py --sources  # regenerar SOURCES.md
+    uv run --no-project --python 3.14 tests/fixtures/fetch_fixtures.py            # descargar + verificar
+    uv run --no-project --python 3.14 tests/fixtures/fetch_fixtures.py --verify   # solo verificar
+    uv run --no-project --python 3.14 tests/fixtures/fetch_fixtures.py --sources  # regenerar SOURCES.md
 
 Solo usa la biblioteca estándar. Los archivos van a tests/fixtures/photos/ (ignorado por git).
 Cada archivo se verifica contra el SHA-1 publicado por Wikimedia Commons y el SHA-256 fijado
@@ -88,7 +88,7 @@ def write_sources(photos: list[dict]) -> None:
         "Solo medios CC0 / dominio público. Generado desde `manifest.json` con",
         "`fetch_fixtures.py --sources`; no editar a mano.",
         "",
-        "Descarga: `uv run --no-project --python 3.12 tests/fixtures/fetch_fixtures.py`",
+        "Descarga: `uv run --no-project --python 3.14 tests/fixtures/fetch_fixtures.py`",
         "(los archivos quedan en `tests/fixtures/photos/`, ignorado por git).",
         "",
         "| id | Caso | Resolución | Licencia | Autor | Origen | SHA-256 |",

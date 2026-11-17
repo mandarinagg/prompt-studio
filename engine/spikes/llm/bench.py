@@ -100,7 +100,7 @@ def start_server(
             with urllib.request.urlopen(URL + "/health", timeout=2) as r:
                 if r.status == 200:
                     return proc, time.perf_counter() - t0
-        except (urllib.error.URLError, ConnectionError, TimeoutError):
+        except urllib.error.URLError, ConnectionError, TimeoutError:
             pass
         time.sleep(0.25)
     proc.kill()

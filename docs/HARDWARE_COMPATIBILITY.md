@@ -16,7 +16,7 @@
 | git, gh | Instalados |
 | Node 26 / npm 11 / pnpm 10 | Instalados |
 | Python 3.15 (sistema) | Sin tocar. Demasiado nuevo para wheels de ML |
-| Python 3.12 | Gestionado por `uv` (`uv python install 3.12 --no-bin`), aislado del sistema |
+| Python 3.14.10 | Gestionado por `uv` (`uv python install 3.14.10 --no-bin`), aislado del sistema (ADR-0008) |
 | Rust 1.100.0 / cargo | Instalado vía rustup (`stable-x86_64-pc-windows-msvc`) |
 | VS 2022 Build Tools (C++) | Instalado (requerido por Rust/MSVC y Tauri) |
 | FFmpeg n9.0.2 **LGPL** | BtbN/FFmpeg-Builds, sin x264/x265; `h264_amf`, `hevc_amf`, `av1_amf` listados |

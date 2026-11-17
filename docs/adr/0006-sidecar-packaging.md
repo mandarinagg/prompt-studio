@@ -32,8 +32,8 @@ El embebible es además más simple de depurar: es el mismo Python con los mismo
 
 ## Consecuencias
 - **Versión de Python:** python.org solo publica binarios embebibles mientras una rama recibe
-  correcciones de bugs. Para 3.12 el último es el **3.12.10**. Hay que decidir si nos quedamos
-  ahí o pasamos a 3.14 (issue de seguimiento).
+  correcciones de bugs. Para 3.12 el último es el **3.12.10**. **Resuelto en ADR-0008:** se pasó
+  a 3.14.10, con la misma versión en desarrollo y en distribución.
 - Las DLL nativas de los wheels (libvips, numpy) no están firmadas; hasta ahora SAC las acepta
   por reputación. Hay que volver a verificarlo con cada actualización de dependencias.
 - El instalador final igual debe estar **firmado** para usuarios con SAC (issue de seguimiento).
