@@ -1,0 +1,85 @@
+# Casos mezclados (español e inglés en la misma frase) y con errores de tipeo o sin tildes:
+# lo que se escribe a las apuradas desde el celular. Cubren tono, color, detalle, geometría y
+# export con palabras en spanglish ("croppeala", "sharpen"), tildes faltantes ("saturacion") y
+# faltas de ortografía ("brigther", "vignete").
+# Formato: docs/PROMPT_ENGINE.md § Evaluación.
+
+[[cases]]
+id = "mix-mas-luz"
+prompt = "mas luz"
+expect = "ops"
+require = [["exposure", "auto_exposure", "shadows"]]
+sign = { "exposure.ev" = "+", "shadows.amount" = "+" }
+tags = ["typos", "tono"]
+descriptors = { width = 6000, height = 4000, orientation = "horizontal", mean_luminance = 0.3, exposure_ev = -0.9, clipped_shadows = 0.07, white_balance_estimate = "neutro" }
+
+[[cases]]
+id = "mix-saturacion-sin-tilde"
+prompt = "subile la saturacion un poco"
+expect = "ops"
+require = [["saturation", "vibrance"]]
+sign = { "saturation.amount" = "+", "vibrance.amount" = "+" }
+tags = ["typos", "color"]
+descriptors = { width = 6000, height = 4000, orientation = "horizontal", mean_luminance = 0.46, exposure_ev = 0.0, white_balance_estimate = "neutro" }
+
+[[cases]]
+id = "mix-brigther-typo"
+prompt = "make it brigther"
+expect = "ops"
+require = [["exposure", "auto_exposure", "shadows"]]
+sign = { "exposure.ev" = "+", "shadows.amount" = "+" }
+tags = ["typos", "tono"]
+descriptors = { width = 6000, height = 4000, orientation = "horizontal", mean_luminance = 0.29, exposure_ev = -1.0, clipped_shadows = 0.06, white_balance_estimate = "neutro" }
+
+[[cases]]
+id = "mix-contraste-menos-saturation"
+prompt = "mas contraste y menos saturation"
+expect = "ops"
+require = ["contrast", "saturation"]
+sign = { "contrast.amount" = "+", "saturation.amount" = "-" }
+tags = ["typos", "multi"]
+descriptors = { width = 6000, height = 4000, orientation = "horizontal", mean_luminance = 0.5, exposure_ev = 0.0 }
+
+[[cases]]
+id = "mix-sharpen-noise"
+prompt = "ponele mas sharpen y bajale el noise"
+expect = "ops"
+require = ["sharpen", "denoise"]
+tags = ["typos", "detalle", "multi"]
+descriptors = { width = 6000, height = 4000, orientation = "horizontal", mean_luminance = 0.2, exposure_ev = -1.4, clipped_shadows = 0.18, white_balance_estimate = "cálido" }
+
+[[cases]]
+id = "mix-croppeala-webp"
+prompt = "croppeala a 16:9 y exportala en webp"
+expect = "ops"
+require = ["crop"]
+values = { "crop.aspect_ratio" = "16:9", "export.format" = "webp" }
+tags = ["typos", "geometria", "export"]
+descriptors = { width = 4000, height = 6000, orientation = "vertical" }
+
+[[cases]]
+id = "mix-white-balance-yellow"
+prompt = "arregla el white balance, esta muy yellow"
+expect = "ops"
+require = [["auto_white_balance", "white_balance"]]
+sign = { "white_balance.temperature_shift" = "-" }
+tags = ["typos", "color"]
+descriptors = { width = 5472, height = 3648, orientation = "horizontal", mean_luminance = 0.4, exposure_ev = -0.3, white_balance_estimate = "muy cálido" }
+
+[[cases]]
+id = "mix-bw-vignete"
+prompt = "pasala a b&w y ponele vignete"
+expect = "ops"
+require = ["saturation", "vignette"]
+sign = { "vignette.amount" = "-" }
+max = { "saturation.amount" = -90 }
+tags = ["typos", "estilo"]
+descriptors = { width = 6000, height = 4000, orientation = "horizontal", mean_luminance = 0.5, exposure_ev = 0.0 }
+
+[[cases]]
+id = "mix-sin-gps-jpg-85"
+prompt = "export sin GPS plz, jpg quality 85"
+expect = "ops"
+values = { "export.metadata" = "strip_gps", "export.format" = "jpeg", "export.quality" = 85 }
+tags = ["typos", "export"]
+descriptors = { width = 4032, height = 3024, orientation = "horizontal" }
