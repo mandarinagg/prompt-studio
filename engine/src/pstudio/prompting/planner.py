@@ -5,8 +5,9 @@
 2. Pide el plan al proveedor elegido con el pipeline de provider.py: validación, un reintento
    y, si el proveedor no está o falla, respaldo a las reglas con aviso.
 
-`auto` usa el LLM local si está configurado (si falla, el pipeline cae a reglas) y, si no,
-las reglas directamente.
+`auto` usa las reglas: al cerrar M2 aciertan más que el LLM local y son 2000× más rápidas. El
+LLM se pide explícito (`--provider local_llm`, con respaldo a reglas) hasta que un híbrido
+demuestre mejora (#53).
 """
 
 from __future__ import annotations
@@ -22,7 +23,9 @@ from pstudio.prompting.provider import PlanRequest, PlanResult, make_plan
 from pstudio.prompting.rules import RulesProvider
 from pstudio.render.io import decode
 
-AUTO_ORDER = ("local_llm", "rules")
+# Medido al cerrar M2: las reglas aciertan más (~90% a ciegas, 1.5 ms) que el LLM local
+# (87.5%, 3.5 s). El LLM queda opt-in (--provider local_llm) hasta que un híbrido mejore (#53).
+AUTO_ORDER = ("rules",)
 
 
 def image_descriptors(path: Path) -> dict:

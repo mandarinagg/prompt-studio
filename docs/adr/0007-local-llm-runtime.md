@@ -49,3 +49,14 @@ el catálogo completo ocupa ~1600 tokens (el del spike, ~620) y con 2048 se cort
 largos y el reintento. Medido en la RX 6600 XT, 4096 genera igual de rápido que 2048 con este
 prompt (36.5 contra 37.0 tok/s) y usa ~5.3 GiB de VRAM. Detalle y resultados en
 [PROMPT_ENGINE.md](../PROMPT_ENGINE.md#proveedor-local_llm-17).
+
+## Decisión al cerrar M2 (2026-11-17)
+Medido con `pstudio eval` sobre los mismos casos, el LLM local integrado (#17) da 99.3% de
+planes válidos y 88.1% correctos (87.5% en el set ciego `holdout.toml`), con mediana de 3.5 s.
+Las reglas (#15) dan ~90% a ciegas, medido dos veces con sets independientes, en ~1.5 ms. Hoy
+el LLM no suma precisión. Por eso:
+- `--provider auto` usa las reglas;
+- el LLM queda disponible y opt-in (`--provider local_llm`);
+- el híbrido propuesto arriba se mide en #53 antes de activarlo, con un set ciego nuevo.
+
+El runtime elegido (llama-server + Qwen3-8B, Vulkan) no cambia.

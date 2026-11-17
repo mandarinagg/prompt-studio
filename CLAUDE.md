@@ -29,7 +29,7 @@ identificadores: inglés.
 - App: `cd app && pnpm install && pnpm tauri dev`
 
 ## Estado
-Milestone actual: **M2 — Motor de prompts (CLI)**. Ver issues abiertos con
-`gh issue list --milestone "M2 - Motor de prompts (CLI)"`; #15 (proveedor por reglas) es el
-camino crítico. M0 cerrado el 2026-11-16; M1 cerrado el 2026-11-17 (18 ops, `pstudio apply`,
-presets, caché de preview; ver docs/ROADMAP.md).
+Milestone actual: **M3 — App de escritorio (v0.1)**. Ver issues abiertos con
+`gh issue list --milestone "M3 - App de escritorio (v0.1)"`. Cerrados: M0 (2026-11-16), M1 y
+M2 (2026-11-17): 18 ops, `pstudio plan/apply/eval/compare`, proveedores rules/local_llm/cloud.
+Balance y mediciones en docs/ROADMAP.md.
