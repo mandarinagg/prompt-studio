@@ -43,6 +43,23 @@ def _cmd_validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_analyze(args: argparse.Namespace) -> int:
+    from pstudio.analysis import analyze
+    from pstudio.render import decode
+
+    path = Path(args.image)
+    import pyvips
+
+    try:
+        img, info = decode(path)
+    except (OSError, ValueError, pyvips.Error) as e:
+        print(f"no se pudo abrir {path.name}: {e}", file=sys.stderr)
+        return 2
+    out = {"source": {"width": info.width, "height": info.height}, **analyze(img).to_dict()}
+    print(json.dumps(out, indent=2, ensure_ascii=False))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> None:
     # En Windows, con la salida redirigida, Python usa cp1252: se fuerza UTF-8 (acentos).
     for stream in (sys.stdout, sys.stderr):
@@ -56,6 +73,10 @@ def main(argv: list[str] | None = None) -> None:
     p_schema.add_argument("--out", help="escribir en un archivo en lugar de stdout")
     p_validate = sub.add_parser("validate", help="valida un plan JSON contra el esquema")
     p_validate.add_argument("plan", help="archivo .json con el EditPlan")
+    p_analyze = sub.add_parser(
+        "analyze", help="histograma, recorte y balance de blancos estimado (JSON)"
+    )
+    p_analyze.add_argument("image", help="imagen a analizar (no se modifica)")
     args = parser.parse_args(argv)
 
     if args.command == "rpc":
@@ -66,3 +87,5 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(_cmd_schema(args))
     elif args.command == "validate":
         sys.exit(_cmd_validate(args))
+    elif args.command == "analyze":
+        sys.exit(_cmd_analyze(args))
