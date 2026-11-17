@@ -30,7 +30,7 @@ def test_ping():
 
 def test_version_reports_libvips():
     result = call("engine.version")["result"]
-    assert result["python"].startswith("3.12")
+    assert result["python"].startswith("3.14")
     assert result["libvips"].count(".") == 2
 
 

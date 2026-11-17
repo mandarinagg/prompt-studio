@@ -93,7 +93,7 @@ Ver `docs/HARDWARE_COMPATIBILITY.md`. Resumen: **sin CUDA**; ROCm en Windows es 
 usar **Vulkan** (llama.cpp, whisper.cpp, ncnn) y **ONNX Runtime DirectML**. RDNA2 **no
 codifica AV1** por hardware. Solo **56 GB libres en C:** → modelos y caché en directorio
 configurable (sugerido `F:`). Python 3.15 instalado es demasiado nuevo para wheels de ML →
-fijar **Python 3.12** con `uv`.
+fijar **Python 3.14.10** con `uv` (ADR-0008; antes 3.12).
 
 ### P11 — El motor de prompts necesita evaluación, no solo tests
 **Propuesta:** `evals/prompts/` con casos `prompt + descriptores → plan esperado`

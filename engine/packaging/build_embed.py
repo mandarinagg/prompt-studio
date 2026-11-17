@@ -17,9 +17,9 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-PY_VERSION = "3.12.10"  # último 3.12 con binarios oficiales; ver RESULTS.md (versión de Python)
+PY_VERSION = "3.14.10"  # misma versión exacta que .python-version (ADR-0008)
 EMBED_URL = f"https://www.python.org/ftp/python/{PY_VERSION}/python-{PY_VERSION}-embed-amd64.zip"
-EMBED_SHA256 = "4acbed6dd1c744b0376e3b1cf57ce906f9dc9e95e68824584c8099a63025a3c3"
+EMBED_SHA256 = "90905e64a840557d8c1bc4f5b74db3d7ee85e3ffb217611cac1c7813acea4159"
 
 ENGINE = Path(__file__).resolve().parents[1]
 DIST = ENGINE / "dist"
@@ -59,7 +59,7 @@ def main() -> None:
     wheel = next(wheel_dir.glob("pstudio-*.whl"))
     run(
         "uv", "pip", "install", "--quiet", "--target", str(OUT / "lib"),
-        "--python-version", "3.12", "--python-platform", "x86_64-pc-windows-msvc", str(wheel),
+        "--python-version", "3.14", "--python-platform", "x86_64-pc-windows-msvc", str(wheel),
     )  # fmt: skip
     # ._pth: rutas de import del Python embebible (no lee PYTHONPATH ni site-packages del sistema)
     tag = "".join(PY_VERSION.split(".")[:2])

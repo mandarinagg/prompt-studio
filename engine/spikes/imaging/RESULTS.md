@@ -78,7 +78,7 @@ Datos crudos (incluye p90 y mínimos): [`results.json`](results.json).
 
 ## Reproducir
 ```powershell
-uv run --no-project --python 3.12 tests/fixtures/fetch_fixtures.py   # desde la raíz
+uv run --no-project --python 3.14 tests/fixtures/fetch_fixtures.py   # desde la raíz
 cd engine
 uv run --group spike python spikes/imaging/check_equivalence.py
 uv run --group spike python spikes/imaging/run_all.py                 # ~5 min

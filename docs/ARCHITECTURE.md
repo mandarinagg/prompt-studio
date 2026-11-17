@@ -7,7 +7,7 @@
 │                ▲  tipos TS generados desde JSON Schema                               │
 └────────────────┼─────────────────────────────────────────────────────────────────────┘
                  │ JSON-RPC (stdio)  — sin red, sin puertos abiertos
-┌────────────────▼──────────────── Engine (sidecar Python 3.12) ───────────────────────┐
+┌────────────────▼──────────────── Engine (sidecar Python 3.14) ───────────────────────┐
 │  schema/      Pydantic: Plan, Operation, Project  → JSON Schema (fuente única)       │
 │  analyze/     descriptores deterministas (histograma, clipping, WB, EXIF)            │
 │  prompt/      PlanProvider: reglas | LLM local | LLM nube (opt-in)  → validación     │
