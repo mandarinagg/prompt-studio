@@ -176,3 +176,29 @@ def resize(img: pyvips.Image, op: Resize, scale: float = 1.0) -> pyvips.Image:
 
 
 OPS = {"crop": crop, "rotate": rotate, "straighten": straighten, "resize": resize}
+
+
+def output_size(width: int, height: int, operations) -> tuple[int, int]:
+    """Tamaño final (aprox. ±2 px) que deja la parte geométrica de un plan, sin procesar
+    píxeles. Lo usa el export para decidir cuánto puede achicar antes de aplicar el plan."""
+    w, h = width, height
+    for op in operations:
+        if op.is_noop():
+            continue
+        if op.op == "crop":
+            focus = (0.5, 0.5)  # el ancla de sujeto no cambia el tamaño, solo la posición
+            _, _, w, h = crop_box(w, h, op, focus)
+        elif op.op == "rotate":
+            if (op.degrees / 90) == round(op.degrees / 90):
+                if round(op.degrees / 90) % 2:
+                    w, h = h, w
+            else:
+                t = math.radians(abs(op.degrees))
+                c, s = abs(math.cos(t)), abs(math.sin(t))
+                w, h = round(w * c + h * s), round(w * s + h * c)
+        elif op.op == "straighten":
+            k = straighten_scale(w, h, op.degrees)
+            w, h = max(1, math.floor(k * w) - 4), max(1, math.floor(k * h) - 4)
+        elif op.op == "resize":
+            w, h = resize_size(w, h, op)
+    return w, h

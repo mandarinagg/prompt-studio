@@ -28,7 +28,7 @@ import pyvips
 
 Format = Literal["jpeg", "png", "webp", "tiff"]
 ColorSpace = Literal["sRGB", "Display P3"]
-Metadata = Literal["keep", "strip"]
+Metadata = Literal["keep", "strip", "strip_gps"]
 
 SUFFIXES: dict[str, Format] = {
     ".jpg": "jpeg", ".jpeg": "jpeg", ".png": "png", ".webp": "webp",
@@ -143,6 +143,22 @@ def _same_file(a: Path, b: Path) -> bool:
         return False
 
 
+def _without_gps(img: pyvips.Image) -> pyvips.Image:
+    """Saca la ubicación: el bloque GPS del EXIF (libvips lo reconstruye sin esos campos, y
+    conserva el resto: cámara, fecha, exposición) y el XMP si menciona GPS."""
+    fields = img.get_fields()
+    gps = [f for f in fields if f.startswith("exif-ifd3-")]
+    xmp = "xmp-data" in fields and b"GPS" in bytes(img.get("xmp-data"))
+    if not gps and not xmp:
+        return img
+    img = img.copy()
+    for f in gps:
+        img.remove(f)
+    if xmp:
+        img.remove("xmp-data")
+    return img
+
+
 def encode(
     img: pyvips.Image,
     dest: str | Path,
@@ -187,7 +203,9 @@ def encode(
         out = out.copy()
         out.remove("icc-profile-data")  # se embebe el perfil de salida correcto
 
-    keep = pyvips.ForeignKeep.ALL if metadata == "keep" else pyvips.ForeignKeep.ICC
+    if metadata == "strip_gps":
+        out = _without_gps(out)
+    keep = pyvips.ForeignKeep.ICC if metadata == "strip" else pyvips.ForeignKeep.ALL
     options: dict = {"keep": keep, "profile": profile}
     if fmt == "jpeg":
         # 4:4:4 con Q alto: libvips ya lo hace desde Q 90 (spike #2); se fija explícito.
