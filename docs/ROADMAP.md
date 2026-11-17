@@ -30,6 +30,25 @@ caché (#31) y la página de comparación, los hicieron subagentes en paralelo.
   una foto de producto, una raya roja del denoise y vibrance sin efecto. Mantener esa revisión
   visual para M2 (planes) y M3 (UI).
 
+### Cierre de M2 (2026-11-17)
+M2 cerró en **~1 sesión** (estimado: 3–5), con 8 PRs (#44–#52). Tres de ellos los hicieron
+subagentes: dos sets de casos y el proveedor LLM local.
+- **Qué quedó:**
+  - `pstudio plan` → `pstudio apply` de punta a punta, más `pstudio eval` y
+    `pstudio compare` (informe HTML antes/después).
+  - Proveedores `rules` (offline), `local_llm` (llama-server + Qwen3-8B) y `cloud` (opt-in,
+    solo texto).
+  - 151 casos de eval.
+- **Medido:**
+  - Reglas: ~90% correcto **a ciegas** (90.1% y 90.0%, con dos sets escritos por agentes que no
+    vieron el código), ~1.5 ms.
+  - LLM local: 99.3% válido y 88.1% correcto (87.5% a ciegas), mediana 3.5 s, 5.3 GiB de VRAM.
+- **Decisión:** `auto` usa las reglas; el LLM queda opt-in y el híbrido se mide en #53.
+- **Sin probar:** el proveedor nube contra la API real (no hay credencial en este equipo).
+- **Aprendizaje:** medir solo con sets ciegos de otro agente y anotar el número antes de
+  corregir. Los sets "vistos" llegan al 100% y no dicen nada.
+- **Uso:** con 3 agentes en paralelo se llegó al límite de uso dos veces. Máximo 2 a la vez.
+
 - **M2 (M):** sube de riesgo. El spike #5 mostró ~75% de planes correctos con el LLM solo, así
   que el proveedor de reglas (#15) y los evals (#16) pesan más de lo previsto. Se mantiene en
   M, pero con #15 como camino crítico.

@@ -48,8 +48,10 @@ pstudio apply plan.json foto.jpg -o salida/
   texto). La foto es opcional.
 - Muestra la explicación, las ops, lo que no se puede hacer y la pregunta, si la hay.
 - `-o` guarda el JSON; `--json` lo imprime.
-- `--provider auto` usa el LLM local si está configurado y, si no, las reglas. Si el
-  proveedor falla, cae a las reglas y avisa por stderr.
+- `--provider auto` usa las reglas: al cerrar M2 aciertan más que el LLM local (~90% contra
+  87.5% a ciegas) y responden en ~1.5 ms contra ~3.5 s. El LLM se pide con
+  `--provider local_llm` y la nube con `--provider cloud`. Si el proveedor elegido falla, cae
+  a las reglas y avisa por stderr. El híbrido reglas + LLM queda para #53.
 
 ## Proveedor `cloud` (#18): opt-in, solo texto
 Está en `engine/src/pstudio/prompting/cloud.py`. Usa Claude a través del SDK oficial de
@@ -142,8 +144,8 @@ Está en `engine/src/pstudio/prompting/local_llm.py`. Decisión y medición prev
 | `PSTUDIO_LLM_NGL` | capas en la GPU (por defecto 99 = todas; 0 = solo CPU, ~30 s por plan) |
 
 Sin configuración, o con una ruta que no existe, el proveedor no está disponible
-(`ProviderUnavailable`, con un mensaje que dice qué falta). `pstudio plan --provider auto` sigue
-entonces con las reglas, y `pstudio eval --provider local_llm` termina con código 2.
+(`ProviderUnavailable`, con un mensaje que dice qué falta). `pstudio plan --provider local_llm` cae
+entonces a las reglas con aviso, y `pstudio eval --provider local_llm` termina con código 2.
 
 **Qué hace**
 - **Servidor.** Lanza `llama-server` como proceso hijo la primera vez que hace falta, en
