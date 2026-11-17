@@ -86,9 +86,12 @@ siempre devuelve un plan válido.
 | Spike #5, al escribir las reglas | 20 | 80% → 100% |
 | **Medición a ciegas:** casos nuevos que escribió otro agente sin ver las reglas | 91 | **90.1%** |
 | Tras corregir los 7 patrones que fallaban (sin parches caso por caso) | 111 | 100% |
+| **Segunda medición a ciegas:** set nuevo de otro agente (`holdout.toml`) | 40 | **90.0%** |
+| Tras corregir 4 patrones más (alcance de "no cambies la saturación", "está pasada" + descriptores, "flatten/harsh", ancla en otra cláusula) | 151 | 100% |
 
-En todas las etapas el 100% de los planes fue válido. El 100% final es sobre casos ya vistos.
-Para volver a medir a ciegas hace falta otro set de casos nuevos.
+En todas las etapas el 100% de los planes fue válido. Las dos mediciones a ciegas dan ~90%: es la mejor estimación de cómo le va a las reglas con
+pedidos reales nuevos. El 100% es sobre casos ya vistos. Para volver a medir a ciegas hace
+falta otro set de casos nuevos.
 
 ## Evaluación
 `pstudio eval [archivos|carpetas] --provider rules [-v] [--json reporte.json]` corre los casos de
