@@ -1,0 +1,841 @@
+{
+  "$defs": {
+    "AutoExposure": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "auto_exposure",
+          "title": "Op",
+          "type": "string"
+        },
+        "strength": {
+          "default": 1.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Strength",
+          "type": "number"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "AutoExposure",
+      "type": "object"
+    },
+    "AutoWhiteBalance": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "auto_white_balance",
+          "title": "Op",
+          "type": "string"
+        },
+        "method": {
+          "default": "gray_world",
+          "enum": [
+            "gray_world",
+            "white_patch"
+          ],
+          "title": "Method",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "AutoWhiteBalance",
+      "type": "object"
+    },
+    "Blacks": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "default": 0,
+          "description": "-100…100; 0 = sin cambio",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "op": {
+          "const": "blacks",
+          "title": "Op",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Blacks",
+      "type": "object"
+    },
+    "Contrast": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "default": 0,
+          "description": "-100…100; 0 = sin cambio",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "op": {
+          "const": "contrast",
+          "title": "Op",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Contrast",
+      "type": "object"
+    },
+    "Crop": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "crop",
+          "title": "Op",
+          "type": "string"
+        },
+        "aspect_ratio": {
+          "anyOf": [
+            {
+              "enum": [
+                "1:1",
+                "4:5",
+                "5:4",
+                "3:2",
+                "2:3",
+                "4:3",
+                "3:4",
+                "16:9",
+                "9:16"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Aspect Ratio"
+        },
+        "rect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Rect"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "anchor": {
+          "default": "center",
+          "enum": [
+            "center",
+            "subject_or_center",
+            "top",
+            "bottom",
+            "left",
+            "right"
+          ],
+          "title": "Anchor",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Crop",
+      "type": "object"
+    },
+    "Denoise": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "denoise",
+          "title": "Op",
+          "type": "string"
+        },
+        "strength": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Strength",
+          "type": "number"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Denoise",
+      "type": "object"
+    },
+    "Export": {
+      "additionalProperties": false,
+      "description": "Lo que no se indica sale del preset (docs/EXPORT_PRESETS.md) o de la fuente.",
+      "properties": {
+        "preset": {
+          "anyOf": [
+            {
+              "enum": [
+                "original",
+                "high_quality",
+                "web",
+                "catalog_square",
+                "social_vertical",
+                "story_9x16"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Preset"
+        },
+        "format": {
+          "anyOf": [
+            {
+              "enum": [
+                "jpeg",
+                "png",
+                "webp",
+                "tiff"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Format"
+        },
+        "quality": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quality"
+        },
+        "color_space": {
+          "anyOf": [
+            {
+              "enum": [
+                "sRGB",
+                "Display P3"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Color Space"
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "enum": [
+                "keep",
+                "strip",
+                "strip_gps"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Metadata"
+        }
+      },
+      "title": "Export",
+      "type": "object"
+    },
+    "Exposure": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "exposure",
+          "title": "Op",
+          "type": "string"
+        },
+        "ev": {
+          "default": 0,
+          "description": "Pasos de exposición (EV)",
+          "maximum": 5,
+          "minimum": -5,
+          "title": "Ev",
+          "type": "number"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Exposure",
+      "type": "object"
+    },
+    "Highlights": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "default": 0,
+          "description": "-100…100; 0 = sin cambio",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "op": {
+          "const": "highlights",
+          "title": "Op",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Highlights",
+      "type": "object"
+    },
+    "Rect": {
+      "additionalProperties": false,
+      "description": "Rectángulo en fracciones de la imagen (0…1), con origen arriba a la izquierda.",
+      "properties": {
+        "x": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Y",
+          "type": "number"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Width",
+          "type": "number"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Height",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "width",
+        "height"
+      ],
+      "title": "Rect",
+      "type": "object"
+    },
+    "Resize": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "resize",
+          "title": "Op",
+          "type": "string"
+        },
+        "width": {
+          "anyOf": [
+            {
+              "maximum": 16384,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Width"
+        },
+        "height": {
+          "anyOf": [
+            {
+              "maximum": 16384,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Height"
+        },
+        "fit": {
+          "default": "contain",
+          "description": "contain: entra en la caja; cover: la cubre y recorta; exact: deforma",
+          "enum": [
+            "contain",
+            "cover",
+            "exact"
+          ],
+          "title": "Fit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Resize",
+      "type": "object"
+    },
+    "Rotate": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "rotate",
+          "title": "Op",
+          "type": "string"
+        },
+        "degrees": {
+          "default": 0,
+          "description": "Positivo = horario",
+          "maximum": 180,
+          "minimum": -180,
+          "title": "Degrees",
+          "type": "number"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Rotate",
+      "type": "object"
+    },
+    "Saturation": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "default": 0,
+          "description": "-100…100; 0 = sin cambio",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "op": {
+          "const": "saturation",
+          "title": "Op",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Saturation",
+      "type": "object"
+    },
+    "Shadows": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "default": 0,
+          "description": "-100…100; 0 = sin cambio",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "op": {
+          "const": "shadows",
+          "title": "Op",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Shadows",
+      "type": "object"
+    },
+    "Sharpen": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "sharpen",
+          "title": "Op",
+          "type": "string"
+        },
+        "amount": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "radius": {
+          "default": 1.0,
+          "maximum": 5,
+          "minimum": 0.5,
+          "title": "Radius",
+          "type": "number"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Sharpen",
+      "type": "object"
+    },
+    "Straighten": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "straighten",
+          "title": "Op",
+          "type": "string"
+        },
+        "degrees": {
+          "default": 0,
+          "maximum": 45,
+          "minimum": -45,
+          "title": "Degrees",
+          "type": "number"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Straighten",
+      "type": "object"
+    },
+    "Unsupported": {
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "description": "Parte del pedido que no se puede hacer",
+          "maxLength": 500,
+          "title": "Request",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 500,
+          "title": "Reason",
+          "type": "string"
+        },
+        "alternative": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alternative"
+        }
+      },
+      "required": [
+        "request",
+        "reason"
+      ],
+      "title": "Unsupported",
+      "type": "object"
+    },
+    "Vibrance": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "default": 0,
+          "description": "-100…100; 0 = sin cambio",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "op": {
+          "const": "vibrance",
+          "title": "Op",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Vibrance",
+      "type": "object"
+    },
+    "Vignette": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "vignette",
+          "title": "Op",
+          "type": "string"
+        },
+        "amount": {
+          "default": 0,
+          "description": "Negativo = oscurece los bordes",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "midpoint": {
+          "default": 50,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Midpoint",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Vignette",
+      "type": "object"
+    },
+    "WhiteBalance": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "white_balance",
+          "title": "Op",
+          "type": "string"
+        },
+        "temperature_shift": {
+          "default": 0,
+          "description": "Negativo = más frío (azul)",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Temperature Shift",
+          "type": "integer"
+        },
+        "tint_shift": {
+          "default": 0,
+          "description": "Negativo = más verde, positivo = más magenta",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Tint Shift",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "WhiteBalance",
+      "type": "object"
+    },
+    "Whites": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "default": 0,
+          "description": "-100…100; 0 = sin cambio",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "op": {
+          "const": "whites",
+          "title": "Op",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Whites",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "asset": {
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Id del asset en el proyecto",
+      "title": "Asset"
+    },
+    "source_prompt": {
+      "anyOf": [
+        {
+          "maxLength": 2000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Prompt"
+    },
+    "operations": {
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "auto_exposure": "#/$defs/AutoExposure",
+            "auto_white_balance": "#/$defs/AutoWhiteBalance",
+            "blacks": "#/$defs/Blacks",
+            "contrast": "#/$defs/Contrast",
+            "crop": "#/$defs/Crop",
+            "denoise": "#/$defs/Denoise",
+            "exposure": "#/$defs/Exposure",
+            "highlights": "#/$defs/Highlights",
+            "resize": "#/$defs/Resize",
+            "rotate": "#/$defs/Rotate",
+            "saturation": "#/$defs/Saturation",
+            "shadows": "#/$defs/Shadows",
+            "sharpen": "#/$defs/Sharpen",
+            "straighten": "#/$defs/Straighten",
+            "vibrance": "#/$defs/Vibrance",
+            "vignette": "#/$defs/Vignette",
+            "white_balance": "#/$defs/WhiteBalance",
+            "whites": "#/$defs/Whites"
+          },
+          "propertyName": "op"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/Exposure"
+          },
+          {
+            "$ref": "#/$defs/AutoExposure"
+          },
+          {
+            "$ref": "#/$defs/Contrast"
+          },
+          {
+            "$ref": "#/$defs/Highlights"
+          },
+          {
+            "$ref": "#/$defs/Shadows"
+          },
+          {
+            "$ref": "#/$defs/Whites"
+          },
+          {
+            "$ref": "#/$defs/Blacks"
+          },
+          {
+            "$ref": "#/$defs/WhiteBalance"
+          },
+          {
+            "$ref": "#/$defs/AutoWhiteBalance"
+          },
+          {
+            "$ref": "#/$defs/Saturation"
+          },
+          {
+            "$ref": "#/$defs/Vibrance"
+          },
+          {
+            "$ref": "#/$defs/Crop"
+          },
+          {
+            "$ref": "#/$defs/Rotate"
+          },
+          {
+            "$ref": "#/$defs/Straighten"
+          },
+          {
+            "$ref": "#/$defs/Resize"
+          },
+          {
+            "$ref": "#/$defs/Sharpen"
+          },
+          {
+            "$ref": "#/$defs/Denoise"
+          },
+          {
+            "$ref": "#/$defs/Vignette"
+          }
+        ]
+      },
+      "title": "Operations",
+      "type": "array"
+    },
+    "export": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Export"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "explanation": {
+      "anyOf": [
+        {
+          "maxLength": 2000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Explanation"
+    },
+    "unsupported": {
+      "items": {
+        "$ref": "#/$defs/Unsupported"
+      },
+      "title": "Unsupported",
+      "type": "array"
+    },
+    "clarification": {
+      "anyOf": [
+        {
+          "maxLength": 500,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Clarification"
+    }
+  },
+  "title": "EditPlan",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
