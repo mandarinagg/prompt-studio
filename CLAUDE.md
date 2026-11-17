@@ -29,6 +29,7 @@ identificadores: inglés.
 - App: `cd app && pnpm install && pnpm tauri dev`
 
 ## Estado
-Milestone actual: **M1 — Motor de foto (CLI)**. Ver issues abiertos con
-`gh issue list --milestone "M1 - Motor de foto (CLI)"`. M0 cerrado el 2026-11-16 (spikes en
-`engine/spikes/*/RESULTS.md`, ADR-0001…0008 aceptados).
+Milestone actual: **M2 — Motor de prompts (CLI)**. Ver issues abiertos con
+`gh issue list --milestone "M2 - Motor de prompts (CLI)"`; #15 (proveedor por reglas) es el
+camino crítico. M0 cerrado el 2026-11-16; M1 cerrado el 2026-11-17 (18 ops, `pstudio apply`,
+presets, caché de preview; ver docs/ROADMAP.md).
