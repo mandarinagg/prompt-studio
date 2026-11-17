@@ -1,0 +1,343 @@
+# 40 casos ciegos (#15): escritos por un agente que no vio rules.py ni los otros casos.
+# Medición a ciegas de las reglas: 90.0% (36/40) antes de corregir. Desde ese commit ya están "vistos".
+
+# Set a ciegas (holdout) de 40 casos, escrito sin ver reglas ni casos previos.
+
+[[cases]]
+id = "ho-es-brillo-poco"
+prompt = "Subile un poquito el brillo, está medio oscura"
+expect = "ops"
+require = [["exposure", "auto_exposure"]]
+sign = {"exposure.ev" = "+"}
+max = {"exposure.ev" = 1.0}
+tags = ["es", "exposure", "intensity"]
+descriptors = {"width" = 6000, "height" = 4000, "orientation" = "landscape", "mean_luminance" = 0.18, "exposure_ev" = -0.7}
+
+[[cases]]
+id = "ho-es-contraluz-sombras"
+prompt = "Tiene contraluz y se me ve la cara toda negra, levantá las sombras"
+expect = "ops"
+require = ["shadows"]
+sign = {"shadows.amount" = "+"}
+tags = ["es", "shadows"]
+descriptors = {"width" = 4000, "height" = 6000, "orientation" = "portrait", "clipped_shadows" = 0.18, "mean_luminance" = 0.3}
+
+[[cases]]
+id = "ho-es-cielo-quemado"
+prompt = "El cielo me quedó quemado, bajá las altas luces"
+expect = "ops"
+require = ["highlights"]
+sign = {"highlights.amount" = "-"}
+tags = ["es", "highlights"]
+descriptors = {"width" = 6000, "height" = 4000, "orientation" = "landscape", "clipped_highlights" = 0.15}
+
+[[cases]]
+id = "ho-es-calida-atardecer"
+prompt = "Hacela más cálida, como de atardecer"
+expect = "ops"
+require = ["white_balance"]
+sign = {"white_balance.temperature_shift" = "+"}
+tags = ["es", "white_balance", "style"]
+descriptors = {"width" = 6000, "height" = 4000, "orientation" = "landscape", "white_balance_estimate" = [1.0, 1.0, 1.02]}
+
+[[cases]]
+id = "ho-es-fria-sin-saturacion"
+prompt = "Ponela más fría pero no le cambies la saturación"
+expect = "ops"
+require = ["white_balance"]
+sign = {"white_balance.temperature_shift" = "-"}
+forbid = ["saturation", "vibrance"]
+tags = ["es", "white_balance", "negation"]
+
+[[cases]]
+id = "ho-es-blanco-y-negro"
+prompt = "Pasala a blanco y negro"
+expect = "ops"
+require = ["saturation"]
+sign = {"saturation.amount" = "-"}
+max = {"saturation.amount" = -90}
+tags = ["es", "saturation", "style"]
+
+[[cases]]
+id = "ho-es-desenfocar-fondo"
+prompt = "Desenfocame el fondo para que quede efecto retrato"
+expect = "unsupported"
+tags = ["es", "unsupported"]
+
+[[cases]]
+id = "ho-es-recortala-sin-medida"
+prompt = "Recortala"
+expect = "clarification"
+tags = ["es", "crop", "clarification"]
+descriptors = {"width" = 6000, "height" = 4000, "orientation" = "landscape"}
+
+[[cases]]
+id = "ho-es-cuadrada-feed"
+prompt = "Dejala cuadrada para el feed de instagram"
+expect = "ops"
+require = ["crop"]
+values = {"crop.aspect_ratio" = "1:1"}
+tags = ["es", "crop"]
+descriptors = {"width" = 6000, "height" = 4000, "orientation" = "landscape"}
+
+[[cases]]
+id = "ho-es-enderezar-3-grados"
+prompt = "El horizonte quedó torcido unos 3 grados, enderezala"
+expect = "ops"
+require = [["straighten", "rotate"]]
+min = {"straighten.degrees" = -4}
+max = {"straighten.degrees" = 4}
+tags = ["es", "straighten"]
+
+[[cases]]
+id = "ho-es-girar-90"
+prompt = "Girala 90 grados que quedó acostada"
+expect = "ops"
+require = ["rotate"]
+abs = {"rotate.degrees" = 90}
+tags = ["es", "rotate"]
+descriptors = {"width" = 6000, "height" = 4000, "orientation" = "landscape"}
+
+[[cases]]
+id = "ho-es-ruido-nocturna"
+prompt = "Es de noche y tiene un montón de ruido, limpiala"
+expect = "ops"
+require = ["denoise"]
+sign = {"denoise.strength" = "+"}
+tags = ["es", "denoise", "descriptors"]
+descriptors = {"width" = 6000, "height" = 4000, "orientation" = "landscape", "mean_luminance" = 0.06, "exposure_ev" = -2.0, "clipped_shadows" = 0.3}
+
+[[cases]]
+id = "ho-es-quitar-vineta"
+prompt = "Sacale la viñeta, los bordes están muy oscuros"
+expect = "ops"
+require = ["vignette"]
+sign = {"vignette.amount" = "+"}
+tags = ["es", "vignette"]
+
+[[cases]]
+id = "ho-es-achicar-1200"
+prompt = "Achicala a 1200 píxeles de ancho"
+expect = "ops"
+require = ["resize"]
+values = {"resize.width" = 1200}
+forbid = ["crop"]
+tags = ["es", "resize"]
+descriptors = {"width" = 6000, "height" = 4000, "orientation" = "landscape"}
+
+[[cases]]
+id = "ho-es-web-sin-ubicacion"
+prompt = "Exportala para la web y sacale la ubicación"
+expect = "ops"
+values = {"export.preset" = "web"}
+max_ops = 0
+tags = ["es", "export", "metadata"]
+
+[[cases]]
+id = "ho-es-historia-color"
+prompt = "Mejorale un poco el color y dejala lista para una historia de instagram"
+expect = "ops"
+require = [["vibrance", "saturation", "auto_white_balance"]]
+values = {"export.preset" = "story_9x16"}
+tags = ["es", "export", "multi"]
+
+[[cases]]
+id = "ho-es-multi-recto-4-5-contraste"
+prompt = "Enderezala 2 grados, recortala en 4:5 y subile un poco el contraste"
+expect = "ops"
+require = [["straighten", "rotate"], "crop", "contrast"]
+values = {"crop.aspect_ratio" = "4:5"}
+sign = {"contrast.amount" = "+"}
+tags = ["es", "multi", "crop", "contrast", "straighten"]
+
+[[cases]]
+id = "ho-es-negacion-no-recortar"
+prompt = "Mejorá la foto pero no toques la saturación ni el recorte"
+expect = "ops"
+require = [["auto_exposure", "exposure", "contrast", "shadows", "highlights", "sharpen"]]
+forbid = ["saturation", "crop"]
+tags = ["es", "negation", "auto_exposure"]
+descriptors = {"width" = 6000, "height" = 4000, "orientation" = "landscape", "mean_luminance" = 0.2, "exposure_ev" = -0.8}
+
+[[cases]]
+id = "ho-es-estilo-pelicula"
+prompt = "Dale onda de película vieja, medio desteñida"
+expect = "unsupported_or_ops"
+tags = ["es", "style"]
+
+[[cases]]
+id = "ho-es-pedir-script"
+prompt = "Escribime un script de python que le aplique un filtro sepia"
+expect = "unsupported"
+tags = ["es", "unsupported", "injection"]
+
+[[cases]]
+id = "ho-es-hacela-linda"
+prompt = "Hacela más linda"
+expect = "clarification_or_ops"
+require_if_ops = []
+tags = ["es", "ambiguous", "clarification"]
+descriptors = {"width" = 6000, "height" = 4000, "orientation" = "landscape", "mean_luminance" = 0.25}
+
+[[cases]]
+id = "ho-es-sobreexpuesta-descriptor"
+prompt = "Arreglá la luz, está muy pasada"
+expect = "ops"
+require = [["exposure", "auto_exposure", "highlights"]]
+sign = {"exposure.ev" = "-", "highlights.amount" = "-"}
+tags = ["es", "exposure", "descriptors"]
+descriptors = {"width" = 6000, "height" = 4000, "orientation" = "landscape", "mean_luminance" = 0.82, "exposure_ev" = 1.8, "clipped_highlights" = 0.22, "median_luminance" = 0.85}
+
+[[cases]]
+id = "ho-en-much-brighter"
+prompt = "Make it a lot brighter"
+expect = "ops"
+require = [["exposure", "auto_exposure"]]
+sign = {"exposure.ev" = "+"}
+min = {"exposure.ev" = 0.7}
+tags = ["en", "exposure", "intensity"]
+descriptors = {"width" = 6000, "height" = 4000, "orientation" = "landscape", "mean_luminance" = 0.2}
+
+[[cases]]
+id = "ho-en-darken-moody"
+prompt = "Darken it a little, I want it moody"
+expect = "ops"
+require = ["exposure"]
+sign = {"exposure.ev" = "-"}
+min = {"exposure.ev" = -1.5}
+tags = ["en", "exposure", "intensity"]
+
+[[cases]]
+id = "ho-en-flatten-contrast"
+prompt = "Flatten the contrast, it looks too harsh"
+expect = "ops"
+require = ["contrast"]
+sign = {"contrast.amount" = "-"}
+tags = ["en", "contrast"]
+
+[[cases]]
+id = "ho-en-crush-blacks"
+prompt = "Crush the blacks a bit for a punchier look"
+expect = "ops"
+require = ["blacks"]
+sign = {"blacks.amount" = "-"}
+tags = ["en", "blacks"]
+
+[[cases]]
+id = "ho-en-lift-whites"
+prompt = "Bring up the whites"
+expect = "ops"
+require = ["whites"]
+sign = {"whites.amount" = "+"}
+tags = ["en", "whites"]
+descriptors = {"width" = 6000, "height" = 4000, "orientation" = "landscape", "clipped_highlights" = 0.0, "mean_luminance" = 0.35}
+
+[[cases]]
+id = "ho-en-yellow-indoor-wb"
+prompt = "Everything looks yellow from the indoor lights, fix the white balance"
+expect = "ops"
+require = [["auto_white_balance", "white_balance"]]
+sign = {"white_balance.temperature_shift" = "-"}
+tags = ["en", "white_balance", "descriptors"]
+descriptors = {"width" = 6000, "height" = 4000, "orientation" = "landscape", "white_balance_estimate" = [1.2, 1.0, 0.7]}
+
+[[cases]]
+id = "ho-en-vibrance-natural"
+prompt = "Boost the vibrance but keep it natural"
+expect = "ops"
+require = ["vibrance"]
+sign = {"vibrance.amount" = "+"}
+max = {"vibrance.amount" = 60}
+forbid = ["saturation"]
+tags = ["en", "vibrance", "intensity"]
+
+[[cases]]
+id = "ho-en-soft-and-noisy"
+prompt = "It's a bit soft and noisy, clean it up and sharpen it"
+expect = "ops"
+require = ["denoise", "sharpen"]
+sign = {"sharpen.amount" = "+", "denoise.strength" = "+"}
+tags = ["en", "multi", "denoise", "sharpen", "descriptors"]
+descriptors = {"width" = 6000, "height" = 4000, "orientation" = "landscape", "mean_luminance" = 0.15, "exposure_ev" = -1.5}
+
+[[cases]]
+id = "ho-en-crop-169-top"
+prompt = "Crop it to 16:9 and keep the top"
+expect = "ops"
+require = ["crop"]
+values = {"crop.aspect_ratio" = "16:9", "crop.anchor" = "top"}
+tags = ["en", "crop"]
+descriptors = {"width" = 4000, "height" = 4000, "orientation" = "landscape"}
+
+[[cases]]
+id = "ho-en-rotate-ccw"
+prompt = "Rotate it 90 degrees counterclockwise"
+expect = "ops"
+require = ["rotate"]
+values = {"rotate.degrees" = -90}
+tags = ["en", "rotate"]
+descriptors = {"width" = 6000, "height" = 4000, "orientation" = "landscape"}
+
+[[cases]]
+id = "ho-en-resize-1080"
+prompt = "Resize it to 1080 pixels wide"
+expect = "ops"
+require = ["resize"]
+values = {"resize.width" = 1080}
+forbid = ["crop"]
+tags = ["en", "resize"]
+
+[[cases]]
+id = "ho-en-webp-q70-strip"
+prompt = "Save it as webp, quality 70, and strip all the metadata"
+expect = "ops"
+values = {"export.format" = "webp", "export.quality" = 70, "export.metadata" = "strip"}
+max_ops = 0
+tags = ["en", "export", "metadata"]
+
+[[cases]]
+id = "ho-en-remove-person"
+prompt = "Remove the guy in the background"
+expect = "unsupported"
+tags = ["en", "unsupported"]
+
+[[cases]]
+id = "ho-en-replace-sky"
+prompt = "Replace the sky with a sunset"
+expect = "unsupported"
+tags = ["en", "unsupported"]
+
+[[cases]]
+id = "ho-mx-high-sombras"
+prompt = "bajale las highlights y subile las sombras un toque"
+expect = "ops"
+require = ["highlights", "shadows"]
+sign = {"highlights.amount" = "-", "shadows.amount" = "+"}
+tags = ["mixed", "multi", "highlights", "shadows"]
+
+[[cases]]
+id = "ho-mx-bw-crop"
+prompt = "pasala a b&w y croppeala 4:5"
+expect = "ops"
+require = ["saturation", "crop"]
+sign = {"saturation.amount" = "-"}
+max = {"saturation.amount" = -90}
+values = {"crop.aspect_ratio" = "4:5"}
+tags = ["mixed", "multi", "crop", "saturation", "typos"]
+descriptors = {"width" = 4000, "height" = 6000, "orientation" = "portrait"}
+
+[[cases]]
+id = "ho-mx-golden-hour"
+prompt = "make it mas calida plz, tipo golden hour"
+expect = "ops"
+require = ["white_balance"]
+sign = {"white_balance.temperature_shift" = "+"}
+tags = ["mixed", "white_balance", "style"]
+
+[[cases]]
+id = "ho-mx-typos-nitidez"
+prompt = "aumenta la nitides y quitale el ruido"
+expect = "ops"
+require = ["denoise", "sharpen"]
+sign = {"sharpen.amount" = "+"}
+tags = ["mixed", "typos", "multi", "sharpen", "denoise"]

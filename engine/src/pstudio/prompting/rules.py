@@ -94,6 +94,16 @@ MORE = (r"\bmas\b", r"\bmore\b", r"\bsub[ie]", r"\baument", r"\bincreas", r"\bbo
         r"\braise\b", r"\blevant", r"\babr[ie]", r"\bagreg", r"\bpon[eé]?\b", r"\badd\b",
         r"\benhanc", r"\bextra\b", r"\bresalt", r"\bpotenci", r"\bintensific",
         r"\blift")  # fmt: skip
+KEEP_SIDE = re.compile(
+    r"\b(keep|manten|conserv|deja|dej[aá]|focus on|enfoca|centra|preserv)\w*\s+"
+    r"(the |la |el |lo de )?"
+    r"(parte de |part of the |zona de )?(?P<side>top|arriba|bottom|abajo|left|izquierda|right|"
+    r"derecha)\b"
+)
+SIDE_ANCHOR = {
+    "top": "top", "arriba": "top", "bottom": "bottom", "abajo": "bottom",
+    "left": "left", "izquierda": "left", "right": "right", "derecha": "right",
+}  # fmt: skip
 UPSIDE_DOWN = (r"\bal reves\b", r"\bupside down\b", r"\bdar vuelta\b", r"\bdale vuelta\b",
                r"\bcabeza abajo\b", r"\bpatas (para )?arriba\b", r"\binvertida\b")  # fmt: skip
 STATE = r"\b(se ven?|estan?|quedaron|quedo|queda|looks?|are|is|seem|parece)\b"
@@ -105,7 +115,8 @@ RESIZE_WORDS = (
 )
 LESS = (r"\bmenos\b", r"\bless\b", r"\bbaj[aáeo]", r"\breduc", r"\bdisminu", r"\bdecreas",
         r"\blower\b", r"\bsac[aá]", r"\bquit", r"\bremove\b", r"\btone down\b", r"\bsuaviz",
-        r"\bsoften", r"\brecuper", r"\brecover", r"\bcontrol", r"\bbaja\b")  # fmt: skip
+        r"\bsoften", r"\brecuper", r"\brecover", r"\bcontrol", r"\bbaja\b", r"\bflatten",
+        r"\bharsh\b", r"\bmuy dur[oa]\b", r"\bdemasiado dur")  # fmt: skip
 
 
 def intensity(clause: str) -> float:
@@ -389,6 +400,7 @@ TOPICS: dict[str, tuple[tuple[str, ...], int]] = {
             r"\bdemasiado clara\b",
             r"\btoo bright\b",
             r"\bmuy clara\b",
+            r"\b(muy |re |demasiado )?pasad[ao]( de luz)?\b",  # rioplatense: "está pasada"
         ),
         1,
     ),  # fmt: skip
@@ -650,6 +662,7 @@ TOPICS: dict[str, tuple[tuple[str, ...], int]] = {
 
 # Tema → ops que bloquea una negación ("no toques los colores").
 BLOCKS = {
+    "vibrance_saturation": {"saturation", "vibrance"},
     "saturation": {"saturation", "vibrance", "white_balance", "auto_white_balance"},
     "fix_color": {"white_balance", "auto_white_balance"},
     "warm": {"white_balance"}, "cool": {"white_balance"},
@@ -879,7 +892,9 @@ def _tonal_and_color(clause: str, topics: list[str], draft: Draft, desc: dict) -
     for t in topics:
         if t == "bright":
             s = sign
-            if d == 0 and _has(clause, r"\b(corregi|correct|fix|ajust|adjust)") and ev is not None:
+            # "arreglá / corregí la luz" sin decir para dónde: lo decide la foto
+            fix = r"\b(corregi|correct|fix|ajust|adjust|arregl|balance|equilibr)"
+            if d == 0 and _has(clause, fix) and ev is not None:
                 s = 1 if ev < 0 else -1
             if _has(clause, r"\bcorreg\w* (la )?exposicion\b", r"\bfix (the )?exposure\b",
                     r"\bexposicion correcta\b", r"\bproper exposure\b"):  # fmt: skip
@@ -1222,7 +1237,22 @@ def plan_from_rules(request: PlanRequest) -> dict:
             _geometry(negated_part, draft, True)
             _export(negated_part, draft, True)
             for t in _topics(negated_part):
+                # "no cambies la saturación" bloquea saturación/vibrance; "no toques los
+                # colores" bloquea todo el color (incluida la temperatura)
+                if (
+                    t == "saturation"
+                    and _has(negated_part, r"\bsatur")
+                    and not _has(negated_part, r"\bcolou?r")
+                ):
+                    t = "vibrance_saturation"
                 draft.blocked.add(t)
+
+    crop = next((i for i in draft.intents if i.op == "crop"), None)
+    if crop is not None and crop.params.get("anchor") == "subject_or_center":
+        # "keep the top" / "dejá la parte de abajo" puede venir en otra cláusula
+        m = re.search(KEEP_SIDE, text)
+        if m:
+            crop.params["anchor"] = SIDE_ANCHOR[m.group("side")]
 
     blocked_ops: set[str] = set()
     for t in draft.blocked:
