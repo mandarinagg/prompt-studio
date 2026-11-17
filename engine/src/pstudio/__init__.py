@@ -173,6 +173,42 @@ def _cmd_compare(args: argparse.Namespace) -> int:
     return 1 if failed else 0
 
 
+def _cmd_eval(args: argparse.Namespace) -> int:
+    from pstudio.prompting import ProviderUnavailable, get_provider
+    from pstudio.prompting.evals import REPO_EVALS, CaseError, load_cases, run_eval
+
+    paths = [Path(p) for p in args.cases] or [REPO_EVALS]
+    missing = [p for p in paths if not p.exists()]
+    if missing:
+        print(f"no existe: {', '.join(str(p) for p in missing)}", file=sys.stderr)
+        return 2
+    try:
+        cases = load_cases(paths)
+        provider = get_provider(args.provider)
+    except (CaseError, ProviderUnavailable) as e:
+        print(str(e), file=sys.stderr)
+        return 2
+    report = run_eval(provider, cases)
+    for r in report.results:
+        if args.verbose or not r.correct:
+            mark = "ok   " if r.correct else "FALLA"
+            detail = "" if r.correct else "  " + "; ".join(r.fails)
+            print(f"{mark} {r.id:28s} {1000 * r.seconds:7.1f} ms{detail}")
+    s = report.summary
+    lat = s["latency_ms"]
+    print(
+        f"{s['provider']}: {s['cases']} casos · válido al primer intento "
+        f"{s['valid_first_try_pct']}% · válido {s['valid_pct']}% · correcto "
+        f"{s['correct_pct']}% · latencia mediana {lat['median']} ms, p90 {lat['p90']} ms, "
+        f"máx {lat['max']} ms"
+    )
+    if args.json:
+        Path(args.json).write_text(
+            json.dumps(report.to_dict(), indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> None:
     # En Windows, con la salida redirigida, Python usa cp1252: se fuerza UTF-8 (acentos).
     for stream in (sys.stdout, sys.stderr):
@@ -220,6 +256,11 @@ def main(argv: list[str] | None = None) -> None:
     p_compare.add_argument("--size", type=int, default=1600, help="lado largo de la vista (px)")
     p_compare.add_argument("-r", "--recursive", action="store_true", help="incluir subcarpetas")
     p_compare.add_argument("--overwrite", action="store_true", help="reemplazar el informe")
+    p_eval = sub.add_parser("eval", help="corre los evals de prompts contra un proveedor")
+    p_eval.add_argument("cases", nargs="*", help="archivos .toml o carpetas (def. evals/prompts)")
+    p_eval.add_argument("--provider", default="rules", help="proveedor a evaluar (def. rules)")
+    p_eval.add_argument("--json", help="guardar el reporte completo en un archivo JSON")
+    p_eval.add_argument("-v", "--verbose", action="store_true", help="listar también los ok")
     args = parser.parse_args(argv)
 
     if args.command == "rpc":
@@ -234,5 +275,7 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(_cmd_apply(args))
     elif args.command == "compare":
         sys.exit(_cmd_compare(args))
+    elif args.command == "eval":
+        sys.exit(_cmd_eval(args))
     elif args.command == "analyze":
         sys.exit(_cmd_analyze(args))
