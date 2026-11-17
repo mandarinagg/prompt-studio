@@ -173,6 +173,14 @@ def _cmd_compare(args: argparse.Namespace) -> int:
     return 1 if failed else 0
 
 
+def _announce_cloud(text: str) -> None:
+    print(
+        "aviso: se envía a Anthropic SOLO este texto (nunca la foto ni su nombre):", file=sys.stderr
+    )
+    for line in text.splitlines():
+        print(f"  | {line}", file=sys.stderr)
+
+
 def _cmd_plan(args: argparse.Namespace) -> int:
     import pyvips
 
@@ -184,7 +192,7 @@ def _cmd_plan(args: argparse.Namespace) -> int:
         print(f"no existe: {image}", file=sys.stderr)
         return 2
     try:
-        result = plan_for(args.prompt, image, args.provider)
+        result = plan_for(args.prompt, image, args.provider, before_send=_announce_cloud)
     except ProviderUnavailable as e:
         print(str(e), file=sys.stderr)
         return 2
@@ -311,7 +319,7 @@ def main(argv: list[str] | None = None) -> None:
     p_plan.add_argument("prompt", help='qué querés hacer, p. ej. "aclarala y hacela más cálida"')
     p_plan.add_argument("image", nargs="?", help="foto a analizar (opcional; no se modifica)")
     p_plan.add_argument(
-        "--provider", default="auto", help="auto (LLM local si está, si no reglas), rules, …"
+        "--provider", default="auto", help="auto (LLM local si está, si no reglas), rules, cloud"
     )
     p_plan.add_argument("-o", "--out", help="guardar el plan en un archivo .json")
     p_plan.add_argument("--json", action="store_true", help="imprimir solo el JSON del plan")

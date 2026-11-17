@@ -13,6 +13,11 @@ dependencies = [
 [project.scripts]
 pstudio = "pstudio:main"
 
+[project.optional-dependencies]
+cloud = [
+    "anthropic>=2.9.0",
+]
+
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.8"]
 package = [

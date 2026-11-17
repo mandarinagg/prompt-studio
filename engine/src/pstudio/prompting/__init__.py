@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from pstudio.prompting.cloud import CloudProvider
 from pstudio.prompting.provider import (
     PlanProvider,
     PlanRequest,
@@ -21,6 +22,7 @@ from pstudio.prompting.rules import RulesProvider
 # nombre → fábrica. Los proveedores se registran a medida que existen (#15, #17, #18).
 PROVIDERS: dict[str, Callable[[], PlanProvider]] = {}
 PROVIDERS["rules"] = RulesProvider
+PROVIDERS["cloud"] = CloudProvider  # opt-in explícito (PSTUDIO_CLOUD=1); nunca en "auto"
 
 
 def get_provider(name: str) -> PlanProvider:
