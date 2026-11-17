@@ -54,3 +54,6 @@ Thumbs.db
 # Test fixtures downloaded by tests/fixtures/fetch_fixtures.py
 tests/fixtures/photos/
 *.part
+
+# worktrees de subagentes de Claude Code (locales)
+.claude/worktrees/
