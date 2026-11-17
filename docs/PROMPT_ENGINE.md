@@ -74,4 +74,10 @@ Una clave desconocida o un id repetido es un error: un caso mal tipeado no puede
 El proveedor se mide **sin** el respaldo de reglas, para que un LLM flojo no parezca bueno
 gracias a las reglas.
 
-**Casos.** `evals/prompts/spike5.toml` trae los 20 casos del spike #5.
+**Casos.** `evals/prompts/spike5.toml` trae los 20 casos del spike #5. Además hay 91 casos
+escritos sin mirar ninguna implementación: `es.toml` (47), `en.toml` (35) y `mixed.toml` (9,
+spanglish y errores de tipeo). Cubren las 18 ops en ambos sentidos con palabras de intensidad,
+export (preset, formato, calidad, `strip_gps`, tamaños), pedidos de varios pasos, negaciones,
+estilos, pedidos fuera del catálogo, ambiguos y prompt injection. Cada caso se verificó contra
+un plan ideal hecho a mano (`grade(plan, caso) == []`), así que todos son posibles de pasar.
+Convención: "recortala para historia / catálogo / feed" exige la op `crop` con la proporción.
