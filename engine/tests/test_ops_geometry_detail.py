@@ -305,7 +305,8 @@ def test_golden(o):
         for k, v in o.model_dump(exclude_none=True).items()
         if k != "op"
     )
-    check_golden(f"{o.op}_{params}", apply_op(golden_input(), o))
+    # ":" no es válido en nombres de archivo de Windows (crea un "stream" alternativo NTFS)
+    check_golden(f"{o.op}_{params}".replace(":", "x"), apply_op(golden_input(), o))
 
 
 # ------------------------------------------------------------------ preview = export a escala
