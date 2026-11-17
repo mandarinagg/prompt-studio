@@ -1,6 +1,6 @@
 # ADR-0007 — LLM local: llama-server + Qwen3-8B con salida restringida por JSON Schema
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado (2026-11-16)
 - **Fecha:** 2026-11-16
 - **Evidencia:** spike #5, [`engine/spikes/llm/RESULTS.md`](../../engine/spikes/llm/RESULTS.md)
 - **Concreta:** ADR-0003 (proveedores de plan), que dejaba abierto "llama.cpp/Ollama".

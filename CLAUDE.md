@@ -29,4 +29,6 @@ identificadores: inglés.
 - App: `cd app && pnpm install && pnpm tauri dev`
 
 ## Estado
-Milestone actual: **M0 — Fundaciones**. Ver issues abiertos con `gh issue list --milestone "M0 - Fundaciones"`.
+Milestone actual: **M1 — Motor de foto (CLI)**. Ver issues abiertos con
+`gh issue list --milestone "M1 - Motor de foto (CLI)"`. M0 cerrado el 2026-11-16 (spikes en
+`engine/spikes/*/RESULTS.md`, ADR-0001…0008 aceptados).
