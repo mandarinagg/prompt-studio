@@ -45,3 +45,19 @@ pnpm install
 pnpm tauri dev                           # desarrollo
 pnpm tauri build                         # instalador NSIS en src-tauri/target/release/bundle/nsis
 ```
+
+## Ver el efecto de un plan sin la app (`pstudio compare`)
+
+Mientras la app de escritorio no existe (M3), `pstudio compare` genera una página HTML única,
+autocontenida y sin conexión, con el antes/después de cada foto (divisor arrastrable, botón
+«Antes / Después» o barra espaciadora, modo claro/oscuro). No modifica las fotos ni escribe
+junto a ellas: solo crea el `.html` indicado.
+
+```powershell
+cd engine
+uv run pstudio compare plan.json C:\fotos\vacaciones -o informe.html --size 1600 -r
+```
+
+- `--size`: lado largo de la vista previa (por defecto 1600 px).
+- `-r`: incluye subcarpetas. `--overwrite`: reemplaza un `informe.html` existente.
+- Códigos de salida: 0 ok, 1 alguna foto falló (se muestra como tarjeta de error), 2 uso o plan inválido.

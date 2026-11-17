@@ -122,6 +122,57 @@ def _cmd_apply(args: argparse.Namespace) -> int:
     return 1 if failed else 0
 
 
+def _cmd_compare(args: argparse.Namespace) -> int:
+    import pyvips
+
+    from pstudio.compare import build_html, render_entry, write_report
+    from pstudio.export import collect
+
+    plan = _load_plan(Path(args.plan))
+    if plan is None:
+        return 2
+    if args.size < 64:
+        print("--size debe ser al menos 64", file=sys.stderr)
+        return 2
+    inputs = [Path(p) for p in args.inputs]
+    missing = [p for p in inputs if not p.exists()]
+    if missing:
+        print(f"no existe: {', '.join(str(p) for p in missing)}", file=sys.stderr)
+        return 2
+    out = Path(args.out)
+    batch = collect(inputs, out.parent, recursive=args.recursive)
+    for f in batch.skipped:
+        print(f"omitido (no es JPEG/PNG/WebP/TIFF): {f}", file=sys.stderr)
+    if not batch.jobs:
+        print("no hay imágenes para procesar", file=sys.stderr)
+        return 2
+    sources = [job.source for job in batch.jobs]
+    if out.exists() and not args.overwrite:
+        print(f"{out} ya existe (usá --overwrite para reemplazarlo)", file=sys.stderr)
+        return 2
+    if any(out.exists() and out.samefile(s) for s in sources):
+        print(f"{out.name} es una de las imágenes de entrada", file=sys.stderr)
+        return 2
+    entries = []
+    for src in sources:
+        e = render_entry(plan, src, args.size)
+        entries.append(e)
+        if e.error:
+            print(f"error  {e.name}: {e.error}", file=sys.stderr)
+        else:
+            print(f"ok     {e.name} ({e.seconds:.1f} s)")
+    try:
+        write_report(
+            out, build_html(plan, entries, args.size), inputs=sources, overwrite=args.overwrite
+        )
+    except (OSError, pyvips.Error) as e:
+        print(f"no se pudo escribir el informe: {e}", file=sys.stderr)
+        return 2
+    failed = sum(1 for e in entries if e.error)
+    print(f"{len(entries) - failed}/{len(entries)} fotos → {out}")
+    return 1 if failed else 0
+
+
 def main(argv: list[str] | None = None) -> None:
     # En Windows, con la salida redirigida, Python usa cp1252: se fuerza UTF-8 (acentos).
     for stream in (sys.stdout, sys.stderr):
@@ -160,6 +211,15 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="reemplazar exportaciones previas (nunca originales)",
     )
+    p_compare = sub.add_parser(
+        "compare", help="informe HTML antes/después de un plan (herramienta de prueba)"
+    )
+    p_compare.add_argument("plan", help="archivo .json con el EditPlan")
+    p_compare.add_argument("inputs", nargs="+", help="imágenes y/o carpetas")
+    p_compare.add_argument("-o", "--out", required=True, help="archivo .html de salida")
+    p_compare.add_argument("--size", type=int, default=1600, help="lado largo de la vista (px)")
+    p_compare.add_argument("-r", "--recursive", action="store_true", help="incluir subcarpetas")
+    p_compare.add_argument("--overwrite", action="store_true", help="reemplazar el informe")
     args = parser.parse_args(argv)
 
     if args.command == "rpc":
@@ -172,5 +232,7 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(_cmd_validate(args))
     elif args.command == "apply":
         sys.exit(_cmd_apply(args))
+    elif args.command == "compare":
+        sys.exit(_cmd_compare(args))
     elif args.command == "analyze":
         sys.exit(_cmd_analyze(args))
