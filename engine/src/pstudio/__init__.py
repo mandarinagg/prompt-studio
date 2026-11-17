@@ -60,6 +60,68 @@ def _cmd_analyze(args: argparse.Namespace) -> int:
     return 0
 
 
+def _load_plan(path: Path):
+    from pydantic import ValidationError
+
+    from pstudio.schema import EditPlan
+
+    try:
+        return EditPlan.model_validate_json(path.read_bytes())
+    except OSError as e:
+        print(f"no se pudo leer {path.name}: {e.strerror}", file=sys.stderr)
+    except ValidationError as e:
+        print(f"{path.name}: plan inválido ({e.error_count()} errores)", file=sys.stderr)
+        for err in e.errors():
+            loc = ".".join(str(x) for x in err["loc"]) or "(plan)"
+            print(f"  {loc}: {err['msg']}", file=sys.stderr)
+    return None
+
+
+def _cmd_apply(args: argparse.Namespace) -> int:
+    from pydantic import ValidationError
+
+    from pstudio.export import collect, run_batch
+    from pstudio.schema import Export
+
+    plan = _load_plan(Path(args.plan))
+    if plan is None:
+        return 2
+    try:
+        cli = Export(
+            preset=args.preset,
+            format=args.format,
+            quality=args.quality,
+            color_space=args.color_space,
+            metadata=args.metadata,
+        )
+    except ValidationError as e:
+        print(f"opciones de export inválidas: {e.errors()[0]['msg']}", file=sys.stderr)
+        return 2
+    inputs = [Path(p) for p in args.inputs]
+    missing = [p for p in inputs if not p.exists()]
+    if missing:
+        print(f"no existe: {', '.join(str(p) for p in missing)}", file=sys.stderr)
+        return 2
+    batch = collect(inputs, Path(args.out), recursive=args.recursive)
+    for f in batch.skipped:
+        print(f"omitido (no es JPEG/PNG/WebP/TIFF): {f}", file=sys.stderr)
+    if not batch.jobs:
+        print("no hay imágenes para procesar", file=sys.stderr)
+        return 2
+
+    def report(r) -> None:
+        if r.error:
+            print(f"error  {r.source.name}: {r.error}", file=sys.stderr)
+        else:
+            print(f"ok     {r.source.name} → {r.dest} ({r.seconds:.1f} s)")
+
+    results = run_batch(plan, batch, cli=cli, overwrite=args.overwrite, on_result=report)
+    failed = sum(1 for r in results if r.error)
+    total = sum(r.seconds for r in results)
+    print(f"{len(results) - failed}/{len(results)} exportadas en {total:.1f} s")
+    return 1 if failed else 0
+
+
 def main(argv: list[str] | None = None) -> None:
     # En Windows, con la salida redirigida, Python usa cp1252: se fuerza UTF-8 (acentos).
     for stream in (sys.stdout, sys.stderr):
@@ -77,6 +139,27 @@ def main(argv: list[str] | None = None) -> None:
         "analyze", help="histograma, recorte y balance de blancos estimado (JSON)"
     )
     p_analyze.add_argument("image", help="imagen a analizar (no se modifica)")
+    p_apply = sub.add_parser(
+        "apply", help="aplica un plan a imágenes o carpetas y exporta copias (nunca el original)"
+    )
+    p_apply.add_argument("plan", help="archivo .json con el EditPlan")
+    p_apply.add_argument("inputs", nargs="+", help="imágenes y/o carpetas (modo lote)")
+    p_apply.add_argument("-o", "--out", required=True, help="carpeta de salida")
+    p_apply.add_argument(
+        "--preset",
+        choices=["original", "high_quality", "web", "catalog_square", "social_vertical",
+                 "story_9x16"],
+    )  # fmt: skip
+    p_apply.add_argument("--format", choices=["jpeg", "png", "webp", "tiff"])
+    p_apply.add_argument("--quality", type=int, help="1–100 (WebP 100 = sin pérdida)")
+    p_apply.add_argument("--color-space", choices=["sRGB", "Display P3"])
+    p_apply.add_argument("--metadata", choices=["keep", "strip", "strip_gps"])
+    p_apply.add_argument("-r", "--recursive", action="store_true", help="incluir subcarpetas")
+    p_apply.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="reemplazar exportaciones previas (nunca originales)",
+    )
     args = parser.parse_args(argv)
 
     if args.command == "rpc":
@@ -87,5 +170,7 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(_cmd_schema(args))
     elif args.command == "validate":
         sys.exit(_cmd_validate(args))
+    elif args.command == "apply":
+        sys.exit(_cmd_apply(args))
     elif args.command == "analyze":
         sys.exit(_cmd_analyze(args))
