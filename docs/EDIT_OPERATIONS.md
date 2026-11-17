@@ -47,6 +47,47 @@ nunca invierten el orden de los tonos.
   24 MP con decode + 6 ops + JPEG, 0.73 s (Ryzen 5 3600).
 - Pendiente: reglas del proveedor `rules` y evals para estas ops (M2, #15/#16).
 
+## Implementación de las ops de color (#12)
+`engine/src/pstudio/ops/color.py` y los analizadores en `engine/src/pstudio/analysis.py`.
+- `white_balance`: adaptación cromática en el espacio de conos (Bradford), como una cámara.
+  `temperature_shift` ±100 corre ≈ 1 EV la relación rojo/azul; `tint_shift` ±100 mueve el
+  verde ±0.5 EV. El gris conserva su luminancia.
+- `saturation`: escala la distancia de cada color al gris de igual luminancia (−100 = blanco y
+  negro, +100 = el doble). La luminancia no cambia.
+- `vibrance`: igual, pero pesado por lo apagado que está cada color (saturación medida en
+  escala perceptual): sube marrones y verdes apagados y casi no toca rojos ya saturados ni
+  piel.
+- `auto_white_balance`: estima el iluminante y lo lleva a neutro con la misma adaptación,
+  como máximo ±1 EV por cono.
+  - `gray_world` promedia solo los píxeles poco saturados. Con todos, una pared roja o un
+    mantel "son" el iluminante y la foto se tiñe del color opuesto: pasaba en las fotos de
+    restaurante y escenario de `tests/fixtures`.
+  - `white_patch` toma el 1 % más luminoso sin recortar.
+- `auto_exposure`: banda muerta para la clave de la escena (media geométrica de Y entre 0.10
+  y 0.45).
+  - Si la clave está por debajo de la banda, aclara hasta el borde, pero sin llevar a blanco
+    recortado el p99 de lo que hoy no lo está.
+  - Si está por encima, oscurece solo si la foto está lavada, es decir, sin tonos profundos
+    (p1 > 0.10). Así no grisea una foto de producto sobre fondo blanco.
+  - Como máximo ±2 EV, escalado por `strength`.
+- **Analizadores deterministas** (`pstudio analyze foto.jpg` imprime el JSON).
+  - Qué miden: histograma de 64 bins en escala perceptual, percentiles, clave, fracción
+    recortada en blancos y negros, gris promedio y "parche blanco".
+  - Cómo: sobre la imagen reducida a ≤ 512 px por bloques, sin contar píxeles transparentes.
+  - Preview (2048 px) y export (full) dan lo mismo: en las 8 fotos de prueba la clave difiere
+    ≤ 3 % (≈ 0.04 EV) y el balance estimado, < 0.002.
+  - Dentro de un plan, las ops automáticas miden una copia chica que pasa por las mismas ops
+    (`apply_plan`), en lugar de recalcular la imagen entera.
+- Probado sobre las fotos de `tests/fixtures`:
+  - `auto_exposure` da 0 EV en el paisaje de día y en el producto sobre blanco, +0.52 EV en el
+    living cálido y +0.28 EV en el retrato de escenario (frenado por las luces).
+  - `auto_white_balance` no invierte los colores dominantes de ninguna foto.
+- Rendimiento (Ryzen 5 3600, proxy 2048 px de una foto de 24 MP):
+  - Preview de una op: 11–62 ms (las automáticas, ~52 ms con el análisis incluido).
+  - Export de 24 MP con 10 ops (4 de color + 6 tonales) más decode y JPEG: **1.9 s**.
+  - Ambos dentro de los objetivos del spec (< 150 ms y < 3 s).
+- Pendiente: reglas del proveedor `rules` y evals (M2).
+
 ## Export
 `preset` (original, high_quality, web, catalog_square, social_vertical, story_9x16), y
 opcionalmente `format` (jpeg, png, webp, tiff), `quality` (1–100), `color_space` (sRGB,

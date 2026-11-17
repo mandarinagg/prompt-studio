@@ -18,9 +18,8 @@ from collections.abc import Callable
 import numpy as np
 import pyvips
 
-GAMMA = 2.2
-# Luminancia Rec.709/sRGB lineal (los primarios del espacio de trabajo).
-LUMA = (0.2126, 0.7152, 0.0722)
+from pstudio.colorimetry import GAMMA, LUMA
+
 EPS = 1e-6
 # Grilla de la LUT: 32768 puntos por unidad de p, así que p = 0 y p = 1 (negro y blanco) caen
 # exactos en la grilla. Llega hasta p ≈ 2 (Y ≈ 4.6, más de 2 EV sobre el blanco difuso).
