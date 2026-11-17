@@ -195,6 +195,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "numpy" },
+    { name = "pydantic" },
     { name = "pyvips", extra = ["binary"] },
 ]
 
@@ -216,6 +217,7 @@ spike = [
 [package.metadata]
 requires-dist = [
     { name = "numpy", specifier = ">=2" },
+    { name = "pydantic", specifier = ">=2.12" },
     { name = "pyvips", extras = ["binary"], specifier = ">=3.2" },
 ]
 

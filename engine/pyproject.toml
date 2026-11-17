@@ -4,7 +4,11 @@ version = "0.1.0"
 description = "Motor de PROMPT STUDIO: edición de fotos/videos guiada por planes de edición validados."
 license = "MIT"
 requires-python = ">=3.14,<3.15"
-dependencies = ["pyvips[binary]>=3.2", "numpy>=2"]  # ADR-0005
+dependencies = [
+    "pyvips[binary]>=3.2",
+    "numpy>=2",
+    "pydantic>=2.12",
+]  # ADR-0005
 
 [project.scripts]
 pstudio = "pstudio:main"

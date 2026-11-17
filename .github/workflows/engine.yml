@@ -4,9 +4,14 @@ name: engine
 on:
   push:
     branches: [main]
-    paths: ["engine/**", ".github/workflows/engine.yml"]
+    paths: &paths
+      - "engine/**"
+      - ".github/workflows/engine.yml"
+      # los tests verifican que el catálogo y el ejemplo de plan coincidan con estas docs
+      - "docs/EDIT_OPERATIONS.md"
+      - "docs/PROMPT_ENGINE.md"
   pull_request:
-    paths: ["engine/**", ".github/workflows/engine.yml"]
+    paths: *paths
 
 permissions:
   contents: read
