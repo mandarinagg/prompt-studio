@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from pstudio.prompting.cloud import CloudProvider
+from pstudio.prompting.local_llm import LocalLLMProvider
 from pstudio.prompting.provider import (
     PlanProvider,
     PlanRequest,
@@ -23,6 +24,7 @@ from pstudio.prompting.rules import RulesProvider
 PROVIDERS: dict[str, Callable[[], PlanProvider]] = {}
 PROVIDERS["rules"] = RulesProvider
 PROVIDERS["cloud"] = CloudProvider  # opt-in explícito (PSTUDIO_CLOUD=1); nunca en "auto"
+PROVIDERS["local_llm"] = LocalLLMProvider
 
 
 def get_provider(name: str) -> PlanProvider:

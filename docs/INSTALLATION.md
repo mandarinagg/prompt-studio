@@ -61,3 +61,28 @@ uv run pstudio compare plan.json C:\fotos\vacaciones -o informe.html --size 1600
 - `--size`: lado largo de la vista previa (por defecto 1600 px).
 - `-r`: incluye subcarpetas. `--overwrite`: reemplaza un `informe.html` existente.
 - Códigos de salida: 0 ok, 1 alguna foto falló (se muestra como tarjeta de error), 2 uso o plan inválido.
+
+## LLM local (opcional, proveedor `local_llm`)
+
+Sin esto, `pstudio plan` usa el proveedor `rules`. Con esto, usa el LLM local y cae a las
+reglas si falla. Nada se descarga solo: los dos archivos se bajan a mano, con aprobación, y
+**no van al repo** (ADR-0007).
+
+1. **llama.cpp b12359**, binario oficial `win-vulkan-x64` (MIT, ~38 MB), de los releases de
+   `ggml-org/llama.cpp`. Verificar el SHA-256 (`e8d18c6e…0d5e`) y descomprimir en una carpeta
+   propia, p. ej. `D:\prompt-studio\tools\llama.cpp-b12359\`.
+2. **Qwen3-8B Q4_K_M**: `Qwen3-8B-Q4_K_M.gguf` del repo oficial `Qwen/Qwen3-8B-GGUF`
+   (Apache-2.0, 5.03 GB). Verificar el SHA-256 (`d98cdcbd…5785`).
+3. Variables de entorno (de usuario o de la sesión):
+
+```powershell
+$env:PSTUDIO_LLAMA_SERVER = "D:\prompt-studio\tools\llama.cpp-b12359\llama-server.exe"
+$env:PSTUDIO_LLM_MODEL    = "D:\prompt-studio\models\Qwen3-8B-Q4_K_M.gguf"
+cd engine
+uv run pstudio plan "aclarala un poco y recortala para una historia" --provider local_llm
+uv run pstudio eval --provider local_llm -v      # mide el proveedor con evals/prompts
+```
+
+Hace falta una GPU con Vulkan y ~5.5 GB de VRAM libres (medido: 5.3 GiB en una RX 6600 XT).
+Sin GPU (`PSTUDIO_LLM_NGL=0`) funciona, pero tarda ~30 s por plan. Más opciones en
+[PROMPT_ENGINE.md](PROMPT_ENGINE.md#proveedor-local_llm-17).
