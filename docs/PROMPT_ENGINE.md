@@ -39,6 +39,45 @@ si falla, un reintento con el error; si vuelve a fallar, se cae al proveedor `ru
 - El texto del prompt y los metadatos se tratan como datos (resistencia a prompt injection:
   un EXIF que diga "ignora instrucciones" no cambia nada porque solo hay ops del catálogo).
 
+## Proveedor `rules` (#15)
+Está en `engine/src/pstudio/prompting/rules.py`. Funciona offline, es determinista y tarda
+~1.5 ms por pedido (el máximo es 15 ms; el objetivo era < 50 ms). Es el respaldo garantizado:
+siempre devuelve un plan válido.
+
+**Cómo procesa un pedido**
+- Normaliza el texto: minúsculas, sin tildes. Protege frases como "blanco y negro" y lo parte
+  en cláusulas.
+- En cada cláusula detecta el tema (luz, contraste, color, recorte…), la dirección (más o
+  menos) y la intensidad ("un poquito" ×0.5, "mucho" ×2).
+- **Negaciones:** "no toques los colores, solo aclarala" bloquea las ops de color y aplica lo
+  que viene después de "solo". "Sin quemar el cielo" no bloquea nada: pide cuidar las altas
+  luces.
+- **Estado vs. pedido:** "está oscura" o "los colores se ven apagados" describen un problema.
+  "Oscurecela" o "colores más apagados" piden un cambio. El sentido del ajuste sale de esa
+  diferencia.
+- **Estilos:** blanco y negro, sepia, vintage, película, matte, dramático, HDR y soñado se
+  arman con varias ops del catálogo.
+- **Fuera del catálogo** (`unsupported`, con una alternativa cuando la hay): fondo,
+  agregar o borrar elementos, cielo, retoque de piel, IA, estilos artísticos, desenfoque de
+  fondo, perspectiva, espejado, RAW, grano, curvas y máscaras. Pedir código va siempre a
+  `unsupported`: el motor solo aplica ops del catálogo.
+- **Datos faltantes:** recortar sin proporción, cambiar el tamaño sin medida o enderezar sin
+  grados devuelve una sola pregunta concreta en `clarification`.
+- **Valores:** son relativos y moderados (un primer paso que el usuario ajusta con sliders).
+  Las ops se ordenan como en un revelado: geometría → luz → color → detalle → tamaño.
+- **Idioma:** la explicación sale en el idioma del pedido (español o inglés).
+
+**Resultados medidos con `pstudio eval`**
+
+| Etapa | Casos | Correcto |
+|---|---|---|
+| Spike #5, al escribir las reglas | 20 | 80% → 100% |
+| **Medición a ciegas:** casos nuevos que escribió otro agente sin ver las reglas | 91 | **90.1%** |
+| Tras corregir los 7 patrones que fallaban (sin parches caso por caso) | 111 | 100% |
+
+En todas las etapas el 100% de los planes fue válido. El 100% final es sobre casos ya vistos.
+Para volver a medir a ciegas hace falta otro set de casos nuevos.
+
 ## Evaluación
 `pstudio eval [archivos|carpetas] --provider rules [-v] [--json reporte.json]` corre los casos de
 `evals/prompts/*.toml` contra un proveedor (#16). El código está en

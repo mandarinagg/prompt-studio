@@ -16,9 +16,11 @@ from pstudio.prompting.provider import (
     make_plan,
     validate,
 )
+from pstudio.prompting.rules import RulesProvider
 
 # nombre → fábrica. Los proveedores se registran a medida que existen (#15, #17, #18).
 PROVIDERS: dict[str, Callable[[], PlanProvider]] = {}
+PROVIDERS["rules"] = RulesProvider
 
 
 def get_provider(name: str) -> PlanProvider:
