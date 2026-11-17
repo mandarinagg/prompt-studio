@@ -28,6 +28,25 @@ Un parámetro omitido toma el valor por defecto, que es el neutro cuando existe.
 | `denoise` | `strength` | 0 … 1 | 0 |
 | `vignette` | `amount`, `midpoint` (def. 50) | −100 … 100, 0 … 100 | 0 |
 
+## Implementación de las ops tonales (#11)
+`engine/src/pstudio/ops/tonal.py`. Son globales (sin máscaras espaciales en v1) y monótonas:
+nunca invierten el orden de los tonos.
+- `exposure`: multiplica la luz lineal por 2^ev (exacto, como en cámara).
+- Las demás son curvas sobre la luminancia en escala perceptual `p = Y^(1/2.2)` y se aplican
+  como razón `RGB · Y'/Y`, así que **no cambian tono ni saturación**.
+  - `contrast`: curva S alrededor del gris medio (18 %), que queda fijo, igual que el negro y el
+    blanco.
+  - `shadows`: hasta ±3 EV en las sombras profundas, que se apaga hasta 0 en el gris medio.
+    Medios y altas luces no cambian (en un contraluz levanta el árbol de 9/255 a 41/255 sin
+    tocar el cielo).
+  - `highlights`: actúa sobre los tonos altos (pico en p ≈ 2/3); el negro y el blanco quedan
+    fijos.
+  - `whites` / `blacks`: mueven el punto blanco o el punto negro.
+- Rendimiento: las curvas consecutivas de un plan se componen en **una sola LUT** (65 536 puntos
+  con interpolación lineal). 6 ops tonales cuestan 118 ms en un proxy de 2048 px; un export de
+  24 MP con decode + 6 ops + JPEG, 0.73 s (Ryzen 5 3600).
+- Pendiente: reglas del proveedor `rules` y evals para estas ops (M2, #15/#16).
+
 ## Export
 `preset` (original, high_quality, web, catalog_square, social_vertical, story_9x16), y
 opcionalmente `format` (jpeg, png, webp, tiff), `quality` (1–100), `color_space` (sRGB,

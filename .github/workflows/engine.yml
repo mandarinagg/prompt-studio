@@ -10,6 +10,7 @@ on:
       # los tests verifican que el catálogo y el ejemplo de plan coincidan con estas docs
       - "docs/EDIT_OPERATIONS.md"
       - "docs/PROMPT_ENGINE.md"
+      - "tests/fixtures/tiny/**"  # golden images
   pull_request:
     paths: *paths
 
