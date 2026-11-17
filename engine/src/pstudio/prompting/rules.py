@@ -1142,7 +1142,10 @@ def _merge(intents: list[Intent], blocked_ops: set[str]) -> list[dict]:
         cur = merged[it.op]
         if it.op in SUMMABLE:
             key, limit = SUMMABLE[it.op]
-            total = cur.get(key, 0) + it.params.get(key, 0)
+            a, b = cur.get(key, 0), it.params.get(key, 0)
+            # mismo sentido ("está muy oscura… aclarala"): manda el más fuerte, no la suma;
+            # sentidos opuestos se compensan
+            total = (max(a, b) if a > 0 else min(a, b)) if a * b > 0 else a + b
             total = max(-limit, min(limit, total))
             cur[key] = round(total, 2) if isinstance(limit, float) else round(total)
         elif it.op == "white_balance":
@@ -1200,23 +1203,26 @@ def plan_from_rules(request: PlanRequest) -> dict:
 
     for clause in clauses(text):
         clause = _protective(clause, draft)
-        negated = _has(clause, *NEGATION)
-        _geometry(clause, draft, negated)
-        _export(clause, draft, negated)
-        topics = _topics(clause)
-        if negated:
-            # "aclarala sin tocar los colores" / "no toques los colores, solo aclarala": lo
-            # negado se bloquea; lo de antes de la negación y lo de después de "solo" se pide.
-            neg = re.search("|".join(NEGATION), clause)
-            before, rest = clause[: neg.start()], clause[neg.start() :]
+        # Alcance de la negación: lo que viene después de "no/sin" (hasta un "solo/sino") está
+        # negado; lo de antes y lo de después de "solo" se pide. "4:5 para Instagram sin GPS"
+        # recorta y saca el GPS; "no toques los colores, solo aclarala" aclara sin tocar color.
+        positive, negated_part = [clause], ""
+        neg = re.search("|".join(NEGATION), clause)
+        if neg:
+            rest = clause[neg.start() :]
             only = re.split(r"\bsolo\b|\bonly\b|\bjust\b|\bsino\b|\bbut\b", rest, maxsplit=1)
-            for t in _topics(only[0]):
+            negated_part = only[0]
+            positive = [clause[: neg.start()], only[1] if len(only) == 2 else ""]
+        for part in positive:
+            if part.strip():
+                _geometry(part, draft, False)
+                _export(part, draft, False)
+                _tonal_and_color(part, _topics(part), draft, request.descriptors)
+        if negated_part:
+            _geometry(negated_part, draft, True)
+            _export(negated_part, draft, True)
+            for t in _topics(negated_part):
                 draft.blocked.add(t)
-            for part in (before, only[1] if len(only) == 2 else ""):
-                if part.strip():
-                    _tonal_and_color(part, _topics(part), draft, request.descriptors)
-            continue
-        _tonal_and_color(clause, topics, draft, request.descriptors)
 
     blocked_ops: set[str] = set()
     for t in draft.blocked:

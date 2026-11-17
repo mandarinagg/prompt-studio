@@ -226,3 +226,21 @@ def test_latency_well_under_budget():
     for _ in range(50):
         plan("Mejorá la iluminación, más cálida, recortala 4:5 y exportala en webp sin GPS")
     assert (time.perf_counter() - start) / 50 < 0.05
+
+
+def test_negation_scope_is_only_what_follows():
+    p = plan("prepará una versión 4:5 para Instagram sin GPS")
+    assert p["operations"][0] == {
+        "op": "crop",
+        "aspect_ratio": "4:5",
+        "anchor": "subject_or_center",
+    }
+    assert p["export"]["metadata"] == "strip_gps"
+
+
+def test_same_direction_requests_do_not_stack():
+    assert (
+        ops("está muy oscura, aclarala")["exposure"]["ev"]
+        == ops("está muy oscura")["exposure"]["ev"]
+    )
+    assert ops("más contraste, menos contraste").get("contrast") is None  # se compensan

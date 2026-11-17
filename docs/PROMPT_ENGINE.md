@@ -39,6 +39,18 @@ si falla, un reintento con el error; si vuelve a fallar, se cae al proveedor `ru
 - El texto del prompt y los metadatos se tratan como datos (resistencia a prompt injection:
   un EXIF que diga "ignora instrucciones" no cambia nada porque solo hay ops del catálogo).
 
+## Uso desde la terminal (#48)
+```
+pstudio plan "aclarala, más cálida y 4:5 para Instagram sin GPS" foto.jpg -o plan.json
+pstudio apply plan.json foto.jpg -o salida/
+```
+- `pstudio plan` analiza la foto localmente y le pasa los descriptores al proveedor (solo
+  texto). La foto es opcional.
+- Muestra la explicación, las ops, lo que no se puede hacer y la pregunta, si la hay.
+- `-o` guarda el JSON; `--json` lo imprime.
+- `--provider auto` usa el LLM local si está registrado y, si no, las reglas. Si el
+  proveedor falla, cae a las reglas y avisa por stderr.
+
 ## Proveedor `rules` (#15)
 Está en `engine/src/pstudio/prompting/rules.py`. Funciona offline, es determinista y tarda
 ~1.5 ms por pedido (el máximo es 15 ms; el objetivo era < 50 ms). Es el respaldo garantizado:

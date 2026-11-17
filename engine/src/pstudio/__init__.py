@@ -173,6 +173,57 @@ def _cmd_compare(args: argparse.Namespace) -> int:
     return 1 if failed else 0
 
 
+def _cmd_plan(args: argparse.Namespace) -> int:
+    import pyvips
+
+    from pstudio.prompting import ProviderUnavailable
+    from pstudio.prompting.planner import plan_for
+
+    image = Path(args.image) if args.image else None
+    if image is not None and not image.exists():
+        print(f"no existe: {image}", file=sys.stderr)
+        return 2
+    try:
+        result = plan_for(args.prompt, image, args.provider)
+    except ProviderUnavailable as e:
+        print(str(e), file=sys.stderr)
+        return 2
+    except (OSError, ValueError, pyvips.Error) as e:
+        print(f"no se pudo analizar {image.name if image else 'la foto'}: {e}", file=sys.stderr)
+        return 2
+    for w in result.warnings:
+        print(f"aviso: {w}", file=sys.stderr)
+    plan = result.plan
+    if plan is None:
+        print(f"{result.provider} no produjo un plan válido: {result.errors[-1]}", file=sys.stderr)
+        return 1
+    text = plan.model_dump_json(indent=2, exclude_none=True) + "\n"
+    if args.out:
+        Path(args.out).write_text(text, encoding="utf-8", newline="\n")
+    if args.json:
+        sys.stdout.write(text)
+        return 0
+    print(f"proveedor: {result.provider} ({1000 * result.seconds:.0f} ms)")
+    if plan.explanation:
+        print(plan.explanation)
+    for op in plan.operations:
+        params = op.model_dump(mode="json", exclude_none=True)
+        name = params.pop("op")
+        print(f"  · {name} " + " ".join(f"{k}={v}" for k, v in params.items()))
+    if plan.export:
+        print("  export: " + json.dumps(plan.export.model_dump(exclude_none=True)))
+    for u in plan.unsupported:
+        alt = f" — {u.alternative}" if u.alternative else ""
+        print(f"  no disponible: {u.request} ({u.reason}){alt}")
+    if plan.clarification:
+        print(f"  pregunta: {plan.clarification}")
+    if args.out:
+        print(
+            f"plan guardado en {args.out} (aplicalo con: pstudio apply {args.out} <foto> -o <dir>)"
+        )
+    return 0
+
+
 def _cmd_eval(args: argparse.Namespace) -> int:
     from pstudio.prompting import ProviderUnavailable, get_provider
     from pstudio.prompting.evals import REPO_EVALS, CaseError, load_cases, run_eval
@@ -256,6 +307,14 @@ def main(argv: list[str] | None = None) -> None:
     p_compare.add_argument("--size", type=int, default=1600, help="lado largo de la vista (px)")
     p_compare.add_argument("-r", "--recursive", action="store_true", help="incluir subcarpetas")
     p_compare.add_argument("--overwrite", action="store_true", help="reemplazar el informe")
+    p_plan = sub.add_parser("plan", help="pedido en lenguaje natural → plan de edición (JSON)")
+    p_plan.add_argument("prompt", help='qué querés hacer, p. ej. "aclarala y hacela más cálida"')
+    p_plan.add_argument("image", nargs="?", help="foto a analizar (opcional; no se modifica)")
+    p_plan.add_argument(
+        "--provider", default="auto", help="auto (LLM local si está, si no reglas), rules, …"
+    )
+    p_plan.add_argument("-o", "--out", help="guardar el plan en un archivo .json")
+    p_plan.add_argument("--json", action="store_true", help="imprimir solo el JSON del plan")
     p_eval = sub.add_parser("eval", help="corre los evals de prompts contra un proveedor")
     p_eval.add_argument("cases", nargs="*", help="archivos .toml o carpetas (def. evals/prompts)")
     p_eval.add_argument("--provider", default="rules", help="proveedor a evaluar (def. rules)")
@@ -275,6 +334,8 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(_cmd_apply(args))
     elif args.command == "compare":
         sys.exit(_cmd_compare(args))
+    elif args.command == "plan":
+        sys.exit(_cmd_plan(args))
     elif args.command == "eval":
         sys.exit(_cmd_eval(args))
     elif args.command == "analyze":
