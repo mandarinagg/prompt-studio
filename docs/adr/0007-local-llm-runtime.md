@@ -42,3 +42,10 @@ una RX 6600 XT (Vulkan, sin CUDA) y en menos de 8 s (`PRODUCT_SPEC.md` §7).
   2048 → 46).
 - El texto libre del LLM (`explanation`, `alternative`) se muestra como no confiable: no
   ejecuta nada, pero puede contener sugerencias equivocadas.
+
+## Actualización (#17, 2026-11-17)
+Al integrar el proveedor, el contexto pasó de `-c 2048` a `-c 4096`: el prompt de sistema con
+el catálogo completo ocupa ~1600 tokens (el del spike, ~620) y con 2048 se cortaban los planes
+largos y el reintento. Medido en la RX 6600 XT, 4096 genera igual de rápido que 2048 con este
+prompt (36.5 contra 37.0 tok/s) y usa ~5.3 GiB de VRAM. Detalle y resultados en
+[PROMPT_ENGINE.md](../PROMPT_ENGINE.md#proveedor-local_llm-17).

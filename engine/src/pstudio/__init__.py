@@ -247,7 +247,19 @@ def _cmd_eval(args: argparse.Namespace) -> int:
     except (CaseError, ProviderUnavailable) as e:
         print(str(e), file=sys.stderr)
         return 2
-    report = run_eval(provider, cases)
+    try:
+        # Proveedores con arranque (local_llm: lanzar llama-server y cargar el modelo): el
+        # arranque en frío se mide aparte, así no infla la latencia del primer caso.
+        if callable(start := getattr(provider, "start", None)):
+            try:
+                print(f"{provider.name}: listo en {start():.1f} s", file=sys.stderr)
+            except ProviderUnavailable as e:
+                print(str(e), file=sys.stderr)
+                return 2
+        report = run_eval(provider, cases)
+    finally:
+        if callable(close := getattr(provider, "close", None)):
+            close()
     for r in report.results:
         if args.verbose or not r.correct:
             mark = "ok   " if r.correct else "FALLA"

@@ -5,8 +5,8 @@
 2. Pide el plan al proveedor elegido con el pipeline de provider.py: validación, un reintento
    y, si el proveedor no está o falla, respaldo a las reglas con aviso.
 
-`auto` usa el LLM local si está registrado (el pipeline cae a reglas si no está configurado o
-falla) y, si no, las reglas directamente.
+`auto` usa el LLM local si está configurado (si falla, el pipeline cae a reglas) y, si no,
+las reglas directamente.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from pstudio.analysis import analyze
-from pstudio.prompting import PROVIDERS, get_provider
+from pstudio.prompting import PROVIDERS, ProviderUnavailable, get_provider
 from pstudio.prompting.cloud import payload_text
 from pstudio.prompting.descriptors import describe
 from pstudio.prompting.provider import PlanRequest, PlanResult, make_plan
@@ -31,9 +31,15 @@ def image_descriptors(path: Path) -> dict:
 
 
 def resolve_provider(name: str):
-    if name == "auto":
-        name = next(n for n in AUTO_ORDER if n in PROVIDERS)
-    return get_provider(name)
+    if name != "auto":
+        return get_provider(name)
+    for candidate in AUTO_ORDER:
+        if candidate in PROVIDERS:
+            try:
+                return get_provider(candidate)
+            except ProviderUnavailable:
+                continue  # p. ej. el LLM local sin configurar (#17): se sigue con el próximo
+    return RulesProvider()
 
 
 def plan_for(
