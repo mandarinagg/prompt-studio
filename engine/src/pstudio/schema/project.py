@@ -34,7 +34,8 @@ class HistoryEntry(BaseModel):
 class Asset(BaseModel):
     model_config = ConfigDict(extra="forbid", validate_assignment=False)
 
-    id: str = Field(min_length=1, max_length=64)
+    # Se usa en nombres de archivo de la caché: nunca puede ser una ruta.
+    id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
     path: str = Field(min_length=1)
     size: int = Field(ge=0)
     sha256: Sha256

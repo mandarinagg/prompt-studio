@@ -1,0 +1,63 @@
+# CI de la app: tipos TS al día con el contrato RPC del engine, typecheck y tests de Rust.
+name: app
+
+on:
+  push:
+    branches: [main]
+    paths: &paths
+      - "app/**"
+      - "engine/schema/rpc-1.schema.json"
+      - ".github/workflows/app.yml"
+  pull_request:
+    paths: *paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  types:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      # Acciones fijadas por SHA (repo público: evita que un tag movido cambie el código).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          version: "10.34.9"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      # Si falla: `pnpm gen:types` y commitear src/engine/contract.gen.ts.
+      - run: pnpm gen:types && git diff --exit-code -- src/engine/contract.gen.ts
+      - run: pnpm typecheck
+
+  rust:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app/src-tauri
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: cargo fmt --check
+      # tauri-build exige que exista la carpeta de recursos del engine embebido (se arma con
+      # engine/packaging/build_embed.py y no se versiona); los tests no la usan.
+      - run: New-Item -ItemType Directory -Force ../../engine/dist/embed/pstudio-engine | Out-Null
+      # Los tests lanzan un engine falso con el Python del runner (sin el bundle embebido).
+      - run: cargo test --locked
+        env:
+          PSTUDIO_TEST_PYTHON: python

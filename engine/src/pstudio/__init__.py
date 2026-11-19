@@ -11,7 +11,10 @@ __version__ = "0.1.0"
 
 
 def _cmd_schema(args: argparse.Namespace) -> int:
-    from pstudio.schema import json_schema
+    if args.rpc:
+        from pstudio.rpc.contract import rpc_json_schema as json_schema
+    else:
+        from pstudio.schema import json_schema
 
     text = json.dumps(json_schema(), indent=2, ensure_ascii=False) + "\n"
     if args.out:
@@ -291,6 +294,9 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("rpc", help="servidor JSON-RPC 2.0 sobre stdio (lo usa la app)")
     p_schema = sub.add_parser("schema", help="imprime el JSON Schema del EditPlan")
     p_schema.add_argument("--out", help="escribir en un archivo en lugar de stdout")
+    p_schema.add_argument(
+        "--rpc", action="store_true", help="el contrato RPC de la app en lugar del EditPlan"
+    )
     p_validate = sub.add_parser("validate", help="valida un plan JSON contra el esquema")
     p_validate.add_argument("plan", help="archivo .json con el EditPlan")
     p_analyze = sub.add_parser(
