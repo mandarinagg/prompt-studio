@@ -54,6 +54,9 @@ jobs:
         with:
           persist-credentials: false
       - run: cargo fmt --check
+      # tauri-build exige que exista la carpeta de recursos del engine embebido (se arma con
+      # engine/packaging/build_embed.py y no se versiona); los tests no la usan.
+      - run: New-Item -ItemType Directory -Force ../../engine/dist/embed/pstudio-engine | Out-Null
       # Los tests lanzan un engine falso con el Python del runner (sin el bundle embebido).
       - run: cargo test --locked
         env:
