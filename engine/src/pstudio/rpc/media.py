@@ -23,7 +23,7 @@ from collections import OrderedDict
 from pathlib import Path
 
 import pyvips
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from pstudio.render.preview import PreviewCache, Proxy, make_proxy, render_preview
 from pstudio.rpc.server import Notifier, event
@@ -37,6 +37,8 @@ THUMB_QUALITY = 80
 
 @event("thumbnail.ready")
 class ThumbnailReady(BaseModel):
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
     asset: str
     path: str | None
     error: str | None = None

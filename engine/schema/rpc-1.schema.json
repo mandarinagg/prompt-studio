@@ -1,0 +1,1959 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Rpc",
+  "description": "Contrato JSON-RPC 1 entre la app y el engine de PROMPT STUDIO.",
+  "type": "object",
+  "properties": {
+    "methods": {
+      "title": "Methods",
+      "type": "object",
+      "properties": {
+        "asset.apply_plan": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/ApplyPlanParams"
+            },
+            "result": {
+              "$ref": "#/$defs/StackState"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "asset.history": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/AssetParams"
+            },
+            "result": {
+              "$ref": "#/$defs/History"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "asset.jump": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/JumpParams"
+            },
+            "result": {
+              "$ref": "#/$defs/StackState"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "asset.redo": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/AssetParams"
+            },
+            "result": {
+              "$ref": "#/$defs/StackState"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "asset.reset": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/AssetParams"
+            },
+            "result": {
+              "$ref": "#/$defs/StackState"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "asset.set_stack": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/SetStackParams"
+            },
+            "result": {
+              "$ref": "#/$defs/StackState"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "asset.state": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/AssetParams"
+            },
+            "result": {
+              "$ref": "#/$defs/StackState"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "asset.undo": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/AssetParams"
+            },
+            "result": {
+              "$ref": "#/$defs/StackState"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "asset.undo_group": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/GroupParams"
+            },
+            "result": {
+              "$ref": "#/$defs/UndoGroupResult"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "engine.version": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/NoParams"
+            },
+            "result": {
+              "$ref": "#/$defs/EngineVersion"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "image.info": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/PathParams"
+            },
+            "result": {
+              "$ref": "#/$defs/ImageInfo"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "ping": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/NoParams"
+            },
+            "result": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "plan.create": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/PlanParams"
+            },
+            "result": {
+              "$ref": "#/$defs/PlanCreated"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "preview.render": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/PreviewParams"
+            },
+            "result": {
+              "$ref": "#/$defs/PreviewImage"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "project.create": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/CreateParams"
+            },
+            "result": {
+              "$ref": "#/$defs/ProjectInfo"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "project.import": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/ImportParams"
+            },
+            "result": {
+              "$ref": "#/$defs/ImportResult"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "project.info": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/NoParams"
+            },
+            "result": {
+              "$ref": "#/$defs/ProjectInfo"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "project.open": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/OpenParams"
+            },
+            "result": {
+              "$ref": "#/$defs/ProjectInfo"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "project.relink": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/RelinkParams"
+            },
+            "result": {
+              "$ref": "#/$defs/AssetSummary"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "thumbnail.get": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/ThumbParams"
+            },
+            "result": {
+              "$ref": "#/$defs/Thumbnail"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "asset.apply_plan",
+        "asset.history",
+        "asset.jump",
+        "asset.redo",
+        "asset.reset",
+        "asset.set_stack",
+        "asset.state",
+        "asset.undo",
+        "asset.undo_group",
+        "engine.version",
+        "image.info",
+        "ping",
+        "plan.create",
+        "preview.render",
+        "project.create",
+        "project.import",
+        "project.info",
+        "project.open",
+        "project.relink",
+        "thumbnail.get"
+      ],
+      "additionalProperties": false
+    },
+    "events": {
+      "title": "Events",
+      "type": "object",
+      "properties": {
+        "thumbnail.ready": {
+          "$ref": "#/$defs/ThumbnailReady"
+        }
+      },
+      "required": [
+        "thumbnail.ready"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "events",
+    "methods"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "ApplyPlanParams": {
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "title": "Asset",
+          "type": "string"
+        },
+        "plan": {
+          "$ref": "#/$defs/EditPlan"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "group_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Group Id"
+        }
+      },
+      "required": [
+        "asset",
+        "plan"
+      ],
+      "title": "ApplyPlanParams",
+      "type": "object"
+    },
+    "AssetParams": {
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "title": "Asset",
+          "type": "string"
+        }
+      },
+      "required": [
+        "asset"
+      ],
+      "title": "AssetParams",
+      "type": "object"
+    },
+    "AssetSummary": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "file": {
+          "title": "File",
+          "type": "string"
+        },
+        "edited": {
+          "title": "Edited",
+          "type": "boolean"
+        },
+        "missing": {
+          "title": "Missing",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "file",
+        "edited",
+        "missing"
+      ],
+      "title": "AssetSummary",
+      "type": "object"
+    },
+    "AutoExposure": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "auto_exposure",
+          "title": "Op",
+          "type": "string"
+        },
+        "strength": {
+          "default": 1.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Strength",
+          "type": "number"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "AutoExposure",
+      "type": "object"
+    },
+    "AutoWhiteBalance": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "auto_white_balance",
+          "title": "Op",
+          "type": "string"
+        },
+        "method": {
+          "default": "gray_world",
+          "enum": [
+            "gray_world",
+            "white_patch"
+          ],
+          "title": "Method",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "AutoWhiteBalance",
+      "type": "object"
+    },
+    "Blacks": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "default": 0,
+          "description": "-100…100; 0 = sin cambio",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "op": {
+          "const": "blacks",
+          "title": "Op",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Blacks",
+      "type": "object"
+    },
+    "Contrast": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "default": 0,
+          "description": "-100…100; 0 = sin cambio",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "op": {
+          "const": "contrast",
+          "title": "Op",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Contrast",
+      "type": "object"
+    },
+    "CreateParams": {
+      "additionalProperties": false,
+      "properties": {
+        "dir": {
+          "title": "Dir",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dir",
+        "name"
+      ],
+      "title": "CreateParams",
+      "type": "object"
+    },
+    "Crop": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "crop",
+          "title": "Op",
+          "type": "string"
+        },
+        "aspect_ratio": {
+          "anyOf": [
+            {
+              "enum": [
+                "1:1",
+                "4:5",
+                "5:4",
+                "3:2",
+                "2:3",
+                "4:3",
+                "3:4",
+                "16:9",
+                "9:16"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Aspect Ratio"
+        },
+        "rect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Rect"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "anchor": {
+          "default": "center",
+          "enum": [
+            "center",
+            "subject_or_center",
+            "top",
+            "bottom",
+            "left",
+            "right"
+          ],
+          "title": "Anchor",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Crop",
+      "type": "object"
+    },
+    "Denoise": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "denoise",
+          "title": "Op",
+          "type": "string"
+        },
+        "strength": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Strength",
+          "type": "number"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Denoise",
+      "type": "object"
+    },
+    "EditPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "asset": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Id del asset en el proyecto",
+          "title": "Asset"
+        },
+        "source_prompt": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Prompt"
+        },
+        "operations": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "auto_exposure": "#/$defs/AutoExposure",
+                "auto_white_balance": "#/$defs/AutoWhiteBalance",
+                "blacks": "#/$defs/Blacks",
+                "contrast": "#/$defs/Contrast",
+                "crop": "#/$defs/Crop",
+                "denoise": "#/$defs/Denoise",
+                "exposure": "#/$defs/Exposure",
+                "highlights": "#/$defs/Highlights",
+                "resize": "#/$defs/Resize",
+                "rotate": "#/$defs/Rotate",
+                "saturation": "#/$defs/Saturation",
+                "shadows": "#/$defs/Shadows",
+                "sharpen": "#/$defs/Sharpen",
+                "straighten": "#/$defs/Straighten",
+                "vibrance": "#/$defs/Vibrance",
+                "vignette": "#/$defs/Vignette",
+                "white_balance": "#/$defs/WhiteBalance",
+                "whites": "#/$defs/Whites"
+              },
+              "propertyName": "op"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/Exposure"
+              },
+              {
+                "$ref": "#/$defs/AutoExposure"
+              },
+              {
+                "$ref": "#/$defs/Contrast"
+              },
+              {
+                "$ref": "#/$defs/Highlights"
+              },
+              {
+                "$ref": "#/$defs/Shadows"
+              },
+              {
+                "$ref": "#/$defs/Whites"
+              },
+              {
+                "$ref": "#/$defs/Blacks"
+              },
+              {
+                "$ref": "#/$defs/WhiteBalance"
+              },
+              {
+                "$ref": "#/$defs/AutoWhiteBalance"
+              },
+              {
+                "$ref": "#/$defs/Saturation"
+              },
+              {
+                "$ref": "#/$defs/Vibrance"
+              },
+              {
+                "$ref": "#/$defs/Crop"
+              },
+              {
+                "$ref": "#/$defs/Rotate"
+              },
+              {
+                "$ref": "#/$defs/Straighten"
+              },
+              {
+                "$ref": "#/$defs/Resize"
+              },
+              {
+                "$ref": "#/$defs/Sharpen"
+              },
+              {
+                "$ref": "#/$defs/Denoise"
+              },
+              {
+                "$ref": "#/$defs/Vignette"
+              }
+            ]
+          },
+          "title": "Operations",
+          "type": "array"
+        },
+        "export": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Export"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "explanation": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Explanation"
+        },
+        "unsupported": {
+          "items": {
+            "$ref": "#/$defs/Unsupported"
+          },
+          "title": "Unsupported",
+          "type": "array"
+        },
+        "clarification": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Clarification"
+        }
+      },
+      "title": "EditPlan",
+      "type": "object"
+    },
+    "EngineVersion": {
+      "properties": {
+        "pstudio": {
+          "title": "Pstudio",
+          "type": "string"
+        },
+        "python": {
+          "title": "Python",
+          "type": "string"
+        },
+        "libvips": {
+          "title": "Libvips",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pstudio",
+        "python",
+        "libvips"
+      ],
+      "title": "EngineVersion",
+      "type": "object"
+    },
+    "Export": {
+      "additionalProperties": false,
+      "description": "Lo que no se indica sale del preset (docs/EXPORT_PRESETS.md) o de la fuente.",
+      "properties": {
+        "preset": {
+          "anyOf": [
+            {
+              "enum": [
+                "original",
+                "high_quality",
+                "web",
+                "catalog_square",
+                "social_vertical",
+                "story_9x16"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Preset"
+        },
+        "format": {
+          "anyOf": [
+            {
+              "enum": [
+                "jpeg",
+                "png",
+                "webp",
+                "tiff"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Format"
+        },
+        "quality": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quality"
+        },
+        "color_space": {
+          "anyOf": [
+            {
+              "enum": [
+                "sRGB",
+                "Display P3"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Color Space"
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "enum": [
+                "keep",
+                "strip",
+                "strip_gps"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Metadata"
+        }
+      },
+      "title": "Export",
+      "type": "object"
+    },
+    "Exposure": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "exposure",
+          "title": "Op",
+          "type": "string"
+        },
+        "ev": {
+          "default": 0,
+          "description": "Pasos de exposición (EV)",
+          "maximum": 5,
+          "minimum": -5,
+          "title": "Ev",
+          "type": "number"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Exposure",
+      "type": "object"
+    },
+    "GroupParams": {
+      "additionalProperties": false,
+      "properties": {
+        "group_id": {
+          "title": "Group Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id"
+      ],
+      "title": "GroupParams",
+      "type": "object"
+    },
+    "Highlights": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "default": 0,
+          "description": "-100…100; 0 = sin cambio",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "op": {
+          "const": "highlights",
+          "title": "Op",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Highlights",
+      "type": "object"
+    },
+    "History": {
+      "properties": {
+        "cursor": {
+          "title": "Cursor",
+          "type": "integer"
+        },
+        "entries": {
+          "items": {
+            "$ref": "#/$defs/HistoryItem"
+          },
+          "title": "Entries",
+          "type": "array"
+        }
+      },
+      "required": [
+        "cursor",
+        "entries"
+      ],
+      "title": "History",
+      "type": "object"
+    },
+    "HistoryItem": {
+      "properties": {
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "group_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Id"
+        },
+        "at": {
+          "format": "date-time",
+          "title": "At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "group_id",
+        "at"
+      ],
+      "title": "HistoryItem",
+      "type": "object"
+    },
+    "ImageInfo": {
+      "properties": {
+        "width": {
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "title": "Height",
+          "type": "integer"
+        },
+        "bands": {
+          "title": "Bands",
+          "type": "integer"
+        },
+        "format": {
+          "title": "Format",
+          "type": "string"
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "bands",
+        "format"
+      ],
+      "title": "ImageInfo",
+      "type": "object"
+    },
+    "ImportParams": {
+      "additionalProperties": false,
+      "properties": {
+        "paths": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Paths",
+          "type": "array"
+        },
+        "recursive": {
+          "default": false,
+          "title": "Recursive",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "paths"
+      ],
+      "title": "ImportParams",
+      "type": "object"
+    },
+    "ImportResult": {
+      "properties": {
+        "added": {
+          "items": {
+            "$ref": "#/$defs/AssetSummary"
+          },
+          "title": "Added",
+          "type": "array"
+        },
+        "duplicates": {
+          "title": "Duplicates",
+          "type": "integer"
+        },
+        "unsupported": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Unsupported",
+          "type": "array"
+        }
+      },
+      "required": [
+        "added",
+        "duplicates",
+        "unsupported"
+      ],
+      "title": "ImportResult",
+      "type": "object"
+    },
+    "JumpParams": {
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "title": "Asset",
+          "type": "string"
+        },
+        "index": {
+          "title": "Index",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "asset",
+        "index"
+      ],
+      "title": "JumpParams",
+      "type": "object"
+    },
+    "NoParams": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "NoParams",
+      "type": "object"
+    },
+    "OpenParams": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "OpenParams",
+      "type": "object"
+    },
+    "PathParams": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "PathParams",
+      "type": "object"
+    },
+    "PlanCreated": {
+      "properties": {
+        "plan": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EditPlan"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provider": {
+          "title": "Provider",
+          "type": "string"
+        },
+        "ms": {
+          "title": "Ms",
+          "type": "number"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "errors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Errors",
+          "type": "array"
+        },
+        "draft": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EditPlan"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "export_hint": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Resize"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "plan",
+        "provider",
+        "ms",
+        "warnings",
+        "errors",
+        "draft",
+        "export_hint"
+      ],
+      "title": "PlanCreated",
+      "type": "object"
+    },
+    "PlanParams": {
+      "additionalProperties": false,
+      "properties": {
+        "prompt": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Prompt",
+          "type": "string"
+        },
+        "asset": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Asset"
+        },
+        "provider": {
+          "default": "auto",
+          "enum": [
+            "auto",
+            "rules",
+            "local_llm"
+          ],
+          "title": "Provider",
+          "type": "string"
+        }
+      },
+      "required": [
+        "prompt"
+      ],
+      "title": "PlanParams",
+      "type": "object"
+    },
+    "PreviewImage": {
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "width": {
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "title": "Height",
+          "type": "integer"
+        },
+        "proxy_ms": {
+          "title": "Proxy Ms",
+          "type": "number"
+        },
+        "render_ms": {
+          "title": "Render Ms",
+          "type": "number"
+        },
+        "encode_ms": {
+          "title": "Encode Ms",
+          "type": "number"
+        }
+      },
+      "required": [
+        "path",
+        "width",
+        "height",
+        "proxy_ms",
+        "render_ms",
+        "encode_ms"
+      ],
+      "title": "PreviewImage",
+      "type": "object"
+    },
+    "PreviewParams": {
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "title": "Asset",
+          "type": "string"
+        },
+        "stack": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EditPlan"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "long_side": {
+          "default": 2048,
+          "maximum": 2048,
+          "minimum": 256,
+          "title": "Long Side",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "asset"
+      ],
+      "title": "PreviewParams",
+      "type": "object"
+    },
+    "ProjectInfo": {
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "cache_dir": {
+          "title": "Cache Dir",
+          "type": "string"
+        },
+        "assets": {
+          "items": {
+            "$ref": "#/$defs/AssetSummary"
+          },
+          "title": "Assets",
+          "type": "array"
+        }
+      },
+      "required": [
+        "path",
+        "name",
+        "cache_dir",
+        "assets"
+      ],
+      "title": "ProjectInfo",
+      "type": "object"
+    },
+    "Rect": {
+      "additionalProperties": false,
+      "description": "Rectángulo en fracciones de la imagen (0…1), con origen arriba a la izquierda.",
+      "properties": {
+        "x": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Y",
+          "type": "number"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Width",
+          "type": "number"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Height",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "width",
+        "height"
+      ],
+      "title": "Rect",
+      "type": "object"
+    },
+    "RelinkParams": {
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "title": "Asset",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "asset",
+        "path"
+      ],
+      "title": "RelinkParams",
+      "type": "object"
+    },
+    "Resize": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "resize",
+          "title": "Op",
+          "type": "string"
+        },
+        "width": {
+          "anyOf": [
+            {
+              "maximum": 16384,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Width"
+        },
+        "height": {
+          "anyOf": [
+            {
+              "maximum": 16384,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Height"
+        },
+        "fit": {
+          "default": "contain",
+          "description": "contain: entra en la caja; cover: la cubre y recorta; exact: deforma",
+          "enum": [
+            "contain",
+            "cover",
+            "exact"
+          ],
+          "title": "Fit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Resize",
+      "type": "object"
+    },
+    "Rotate": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "rotate",
+          "title": "Op",
+          "type": "string"
+        },
+        "degrees": {
+          "default": 0,
+          "description": "Positivo = horario",
+          "maximum": 180,
+          "minimum": -180,
+          "title": "Degrees",
+          "type": "number"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Rotate",
+      "type": "object"
+    },
+    "Saturation": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "default": 0,
+          "description": "-100…100; 0 = sin cambio",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "op": {
+          "const": "saturation",
+          "title": "Op",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Saturation",
+      "type": "object"
+    },
+    "SetStackParams": {
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "title": "Asset",
+          "type": "string"
+        },
+        "stack": {
+          "$ref": "#/$defs/EditPlan"
+        },
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "group_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Group Id"
+        }
+      },
+      "required": [
+        "asset",
+        "stack",
+        "label"
+      ],
+      "title": "SetStackParams",
+      "type": "object"
+    },
+    "Shadows": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "default": 0,
+          "description": "-100…100; 0 = sin cambio",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "op": {
+          "const": "shadows",
+          "title": "Op",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Shadows",
+      "type": "object"
+    },
+    "Sharpen": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "sharpen",
+          "title": "Op",
+          "type": "string"
+        },
+        "amount": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "radius": {
+          "default": 1.0,
+          "maximum": 5,
+          "minimum": 0.5,
+          "title": "Radius",
+          "type": "number"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Sharpen",
+      "type": "object"
+    },
+    "StackState": {
+      "properties": {
+        "asset": {
+          "title": "Asset",
+          "type": "string"
+        },
+        "stack": {
+          "$ref": "#/$defs/EditPlan"
+        },
+        "cursor": {
+          "title": "Cursor",
+          "type": "integer"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "can_undo": {
+          "title": "Can Undo",
+          "type": "boolean"
+        },
+        "can_redo": {
+          "title": "Can Redo",
+          "type": "boolean"
+        },
+        "changed": {
+          "title": "Changed",
+          "type": "boolean"
+        },
+        "export_hint": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Resize"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "asset",
+        "stack",
+        "cursor",
+        "label",
+        "can_undo",
+        "can_redo",
+        "changed",
+        "export_hint"
+      ],
+      "title": "StackState",
+      "type": "object"
+    },
+    "Straighten": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "straighten",
+          "title": "Op",
+          "type": "string"
+        },
+        "degrees": {
+          "default": 0,
+          "maximum": 45,
+          "minimum": -45,
+          "title": "Degrees",
+          "type": "number"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Straighten",
+      "type": "object"
+    },
+    "ThumbParams": {
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "title": "Asset",
+          "type": "string"
+        }
+      },
+      "required": [
+        "asset"
+      ],
+      "title": "ThumbParams",
+      "type": "object"
+    },
+    "Thumbnail": {
+      "properties": {
+        "asset": {
+          "title": "Asset",
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Path"
+        }
+      },
+      "required": [
+        "asset",
+        "path"
+      ],
+      "title": "Thumbnail",
+      "type": "object"
+    },
+    "ThumbnailReady": {
+      "properties": {
+        "asset": {
+          "title": "Asset",
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Path"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        }
+      },
+      "required": [
+        "asset",
+        "path",
+        "error"
+      ],
+      "title": "ThumbnailReady",
+      "type": "object"
+    },
+    "UndoGroupResult": {
+      "properties": {
+        "undone": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Undone",
+          "type": "array"
+        },
+        "skipped": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Skipped",
+          "type": "array"
+        }
+      },
+      "required": [
+        "undone",
+        "skipped"
+      ],
+      "title": "UndoGroupResult",
+      "type": "object"
+    },
+    "Unsupported": {
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "description": "Parte del pedido que no se puede hacer",
+          "maxLength": 500,
+          "title": "Request",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 500,
+          "title": "Reason",
+          "type": "string"
+        },
+        "alternative": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alternative"
+        }
+      },
+      "required": [
+        "request",
+        "reason"
+      ],
+      "title": "Unsupported",
+      "type": "object"
+    },
+    "Vibrance": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "default": 0,
+          "description": "-100…100; 0 = sin cambio",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "op": {
+          "const": "vibrance",
+          "title": "Op",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Vibrance",
+      "type": "object"
+    },
+    "Vignette": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "vignette",
+          "title": "Op",
+          "type": "string"
+        },
+        "amount": {
+          "default": 0,
+          "description": "Negativo = oscurece los bordes",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "midpoint": {
+          "default": 50,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Midpoint",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Vignette",
+      "type": "object"
+    },
+    "WhiteBalance": {
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "const": "white_balance",
+          "title": "Op",
+          "type": "string"
+        },
+        "temperature_shift": {
+          "default": 0,
+          "description": "Negativo = más frío (azul)",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Temperature Shift",
+          "type": "integer"
+        },
+        "tint_shift": {
+          "default": 0,
+          "description": "Negativo = más verde, positivo = más magenta",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Tint Shift",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "WhiteBalance",
+      "type": "object"
+    },
+    "Whites": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "default": 0,
+          "description": "-100…100; 0 = sin cambio",
+          "maximum": 100,
+          "minimum": -100,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "op": {
+          "const": "whites",
+          "title": "Op",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "title": "Whites",
+      "type": "object"
+    }
+  }
+}

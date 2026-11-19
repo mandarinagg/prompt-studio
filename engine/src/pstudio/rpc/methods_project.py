@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from pstudio.project import history
 from pstudio.project.stack import merge
@@ -43,6 +43,8 @@ class ImportResult(BaseModel):
 
 
 class StackState(BaseModel):
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
     asset: str
     stack: EditPlan
     cursor: int
