@@ -130,3 +130,29 @@ def test_merge_does_not_mutate_inputs():
     a = plan({"op": "exposure", "ev": 0.3})
     merge(a, plan({"op": "exposure", "ev": 0.4}))
     assert get(a, "exposure").ev == 0.3
+
+
+def test_merge_keeps_non_additive_fields_unless_plan_sets_them():
+    out = merge(
+        plan({"op": "vignette", "amount": -20, "midpoint": 20}),
+        plan({"op": "vignette", "amount": -10}),
+    )
+    v = get(out.stack, "vignette")
+    assert (v.amount, v.midpoint) == (-30, 20)
+    out = merge(
+        plan({"op": "sharpen", "amount": 20, "radius": 2.0}), plan({"op": "sharpen", "amount": 10})
+    )
+    s = get(out.stack, "sharpen")
+    assert (s.amount, s.radius) == (30, 2.0)
+    out = merge(
+        plan({"op": "sharpen", "amount": 20, "radius": 2.0}),
+        plan({"op": "sharpen", "amount": 10, "radius": 3.0}),
+    )
+    assert get(out.stack, "sharpen").radius == 3.0
+
+
+def test_merge_float_sums_cancel_cleanly():
+    out = merge(plan({"op": "exposure", "ev": 0.1}), plan({"op": "exposure", "ev": 0.2}))
+    assert get(out.stack, "exposure").ev == 0.3
+    out = merge(out.stack, plan({"op": "exposure", "ev": -0.3}))
+    assert names(out.stack) == []

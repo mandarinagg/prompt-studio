@@ -77,9 +77,13 @@ def _bounds(op: Operation, field: str) -> tuple[float | None, float | None]:
 
 
 def _add(current: Operation, delta: Operation) -> Operation:
-    values = delta.model_dump()
+    """Suma los campos relativos; el resto se conserva salvo que el plan lo indique."""
+    values = current.model_dump()
+    values.update(delta.model_dump(include=delta.model_fields_set))
     for field in ADDITIVE[current.op]:
         total = getattr(current, field) + getattr(delta, field)
+        if isinstance(total, float):
+            total = round(total, 4)  # 0.1 + 0.2 - 0.3 tiene que dar 0 (no-op), no 5e-17
         lo, hi = _bounds(current, field)
         if lo is not None:
             total = max(lo, total)

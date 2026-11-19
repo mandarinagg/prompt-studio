@@ -71,6 +71,25 @@ def run(args: argparse.Namespace) -> int:
         msg = e.args[0] if isinstance(e, KeyError) else str(e)
         print(msg, file=sys.stderr)
         return 2
+    except OSError as e:
+        name = Path(e.filename).name if e.filename else ""
+        print(
+            f"no se pudo {_VERBS[args.project_command]} {name}: {e.strerror or e}", file=sys.stderr
+        )
+        return 2
+
+
+_VERBS = {
+    "new": "crear el proyecto en",
+    "add": "importar",
+    "list": "leer",
+    "show": "leer",
+    "edit": "guardar",
+    "undo": "guardar",
+    "redo": "guardar",
+    "relink": "ubicar",
+    "export": "exportar a",
+}
 
 
 def _new(args: argparse.Namespace) -> int:

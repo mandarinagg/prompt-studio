@@ -110,3 +110,15 @@ def test_project_cli_errors(tmp_path, capsys):
     run(["add", proj, str(f)], capsys)
     asset = json.loads(run(["list", proj, "--json"], capsys)[1])[0]["id"]
     assert run(["edit", proj, asset, "--plan", str(bad)], capsys)[0] == 1
+
+
+def test_project_cli_os_errors_have_no_traceback(tmp_path, capsys):
+    blocker = tmp_path / "soy_un_archivo"
+    blocker.write_text("x")
+    code, _, err = run(["new", str(blocker), "X"], capsys)
+    assert code == 2 and "Traceback" not in err and "no se pudo" in err
+    run(["new", str(tmp_path), "P"], capsys)
+    proj = str(tmp_path / "P.pstudio")
+    run(["add", proj, str(photo(tmp_path / "a.jpg"))], capsys)
+    code, _, err = run(["export", proj, "-o", str(blocker)], capsys)
+    assert code == 2 and "Traceback" not in err and "no se pudo" in err
