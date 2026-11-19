@@ -154,6 +154,22 @@ opcionalmente `format` (jpeg, png, webp, tiff), `quality` (1–100), `color_spac
 Display P3) y `metadata` (keep | strip | strip_gps). Lo que no se indica sale del preset o de la
 fuente. Ver `EXPORT_PRESETS.md`.
 
+## Orden canónico de la pila (proyectos, #55)
+En un proyecto, la pila de ajustes de cada foto tiene como mucho una op de cada tipo y se aplica
+siempre en este orden (`pstudio.project.stack.CANONICAL_ORDER`, ADR-0009):
+
+straighten → rotate → crop → denoise → auto_white_balance → white_balance → auto_exposure →
+exposure → contrast → highlights → shadows → whites → blacks → saturation → vibrance →
+sharpen → vignette
+
+`resize` no forma parte de la pila: es cosa del export. Al **fusionar** un plan del prompt
+sobre la pila:
+- se suman `ev`, `amount`, `temperature_shift`/`tint_shift` y el `strength` de denoise,
+  recortados al rango del esquema;
+- las ops `auto_*` y la geometría reemplazan;
+- una op que queda en su valor neutro sale de la pila.
+
 ## Agregar una operación
 1. Modelo Pydantic + rango + neutro. 2. Implementación pura. 3. Golden test.
 4. Regla del proveedor `rules` + casos en `evals/`. 5. Actualizar esta tabla.
+6. Ubicarla en `CANONICAL_ORDER` y, si tiene valores relativos, en `ADDITIVE` (`project/stack.py`).

@@ -15,7 +15,7 @@
 │  render/      pipeline float32 lineal, proxies, caché por hash de (asset, ops[:i])   │
 │  video/       OpenTimelineIO → FFmpeg filtergraph                                    │
 │  jobs/        cola local, progreso, cancelación                                      │
-│  project/     project.json versionado + SQLite (índice/caché)                        │
+│  project/     carpeta .pstudio: project.json versionado + cache/ (ADR-0009)          │
 └──────────────────────────────────────────────────────────────────────────────────────┘
         │                    │                         │
      FFmpeg (LGPL)     pyvips (+ OpenCV opc.)     llama.cpp / ONNX Runtime (opcional)
@@ -27,6 +27,8 @@
 - **Un solo motor** renderiza preview y export (evita divergencias).
 - **Caché incremental:** el resultado de aplicar `ops[0..i]` se cachea por hash; mover el
   slider de la op *i* solo recalcula desde *i*.
+- **Proyecto (ADR-0009):** fotos por referencia (ruta + SHA-256), pila de ajustes por foto en
+  orden canónico, historial por foto con snapshots, guardado atómico. Sin SQLite en v0.1.
 - **Catálogo cerrado:** el LLM no puede referenciar nada fuera del registro de operaciones.
 - **Rutas:** el engine solo lee de medios importados y escribe en el directorio del
   proyecto/export; toda ruta se normaliza y valida (anti path traversal).
