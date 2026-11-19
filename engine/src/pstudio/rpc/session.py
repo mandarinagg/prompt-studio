@@ -79,7 +79,13 @@ class Session:
                 PROJECT_CHANGED,
                 "el proyecto cambió fuera de la app: se recargó, repetí la acción",
             )
-        save(path, self.require())
+        try:
+            save(path, self.require())
+        except BaseException:
+            # Lo que quedó en memoria sin guardarse no debe colarse en el próximo guardado.
+            self.project = open_project(path)
+            self._stamp = _stamp(file)
+            raise
         self._stamp = _stamp(file)
 
     def close(self) -> None:

@@ -183,3 +183,58 @@ def test_create_requires_an_existing_folder(tmp_path, rpc, monkeypatch):
     err = rpc.error("project.create", dir=str(tmp_path / "no-existe"), name="P")
     assert err["code"] == ENGINE_ERROR and "no existe la carpeta no-existe" in err["message"]
     assert list(tmp_path.iterdir()) == []
+
+
+def test_asset_id_cannot_escape_the_cache(tmp_path, rpc):
+    # Un project.json editado a mano o compartido no puede llevar un id que sea una ruta.
+    info = rpc("project.create", dir=str(tmp_path), name="P")
+    rpc("project.import", paths=[str(photo(tmp_path / "a.jpg"))])
+    pj = Path(info["path"]) / "project.json"
+    data = json.loads(pj.read_text(encoding="utf-8"))
+    data["assets"][0]["id"] = "../../../photo"
+    pj.write_text(json.dumps(data), encoding="utf-8")
+    err = Client().error("project.open", path=info["path"])
+    assert "está dañado" in err["message"]
+
+
+def test_failed_save_does_not_leak_into_the_next_save(tmp_path, rpc, monkeypatch):
+    import pstudio.rpc.session as session_mod
+
+    info = rpc("project.create", dir=str(tmp_path), name="P")
+    asset = rpc("project.import", paths=[str(photo(tmp_path / "a.jpg"))])["added"][0]["id"]
+    real_save = session_mod.save
+
+    def locked(path, project):
+        raise PermissionError(13, "Acceso denegado", str(path / "project.json"))
+
+    monkeypatch.setattr(session_mod, "save", locked)
+    stack = {"operations": [{"op": "exposure", "ev": 1}]}
+    assert "error" in rpc.raw("asset.set_stack", asset=asset, stack=stack, label="x")
+    monkeypatch.setattr(session_mod, "save", real_save)
+    assert rpc("asset.state", asset=asset)["stack"]["operations"] == []  # se descartó
+    other = {"operations": [{"op": "contrast", "amount": 10}]}
+    rpc("asset.set_stack", asset=asset, stack=other, label="y")
+    saved = stored(info)["assets"][0]
+    assert [e["label"] for e in saved["history"]] == ["Original", "y"]
+
+
+def test_failed_import_is_not_half_applied(tmp_path, rpc, monkeypatch):
+    import pstudio.project.store as store
+
+    info = rpc("project.create", dir=str(tmp_path), name="P")
+    files = [str(photo(tmp_path / f"{i}.jpg", i)) for i in range(2)]
+    real = store.sha256_file
+    calls = []
+
+    def flaky(path):
+        calls.append(path)
+        if len(calls) == 2:
+            raise PermissionError(13, "Acceso denegado", str(path))
+        return real(path)
+
+    monkeypatch.setattr(store, "sha256_file", flaky)
+    assert "error" in rpc.raw("project.import", paths=files)
+    monkeypatch.setattr(store, "sha256_file", real)
+    assert rpc("project.info")["assets"] == []
+    rpc("project.import", paths=files[:1])
+    assert len(stored(info)["assets"]) == 1

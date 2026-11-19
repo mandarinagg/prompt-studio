@@ -145,6 +145,8 @@ class Media:
         folder.mkdir(parents=True, exist_ok=True)
         self._counter += 1
         dest = folder / f"{asset.id}-{self._counter}.jpg"
+        if dest.resolve().parent != folder.resolve():  # el esquema ya lo impide; por las dudas
+            raise ValueError(f"id de foto inválido: {asset.id!r}")
         start = time.perf_counter()
         _to_jpeg(img, dest, PREVIEW_QUALITY)
         encode_ms = (time.perf_counter() - start) * 1000

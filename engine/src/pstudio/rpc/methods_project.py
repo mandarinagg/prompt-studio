@@ -176,9 +176,11 @@ def project_info(s: Session) -> ProjectInfo:
 
 @method("project.import")
 def project_import(s: Session, p: ImportParams) -> ImportResult:
-    project = s.require()
+    # Sobre una copia: si falla a mitad (un archivo bloqueado), el proyecto queda como estaba.
+    project = s.require().model_copy(deep=True)
     r = add_assets(project, [Path(x) for x in p.paths], recursive=p.recursive)
     if r.added:
+        s.project = project
         s.commit()
     return ImportResult(
         added=[summary(project.asset(i)) for i in r.added],
