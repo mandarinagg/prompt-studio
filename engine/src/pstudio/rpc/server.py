@@ -18,9 +18,12 @@ import threading
 import typing
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
+
+from pstudio.project.store import ProjectError
 
 if TYPE_CHECKING:
     from pstudio.rpc.session import Session
@@ -160,6 +163,12 @@ def handle_line(line: str, session: Session | None = None) -> dict[str, Any] | N
         result = m.adapter.dump_python(value, mode="json")
     except RpcError as exc:
         return None if is_notification else _error(req_id, exc.code, exc.message)
+    except ProjectError as exc:
+        return None if is_notification else _error(req_id, ENGINE_ERROR, str(exc))
+    except OSError as exc:
+        name = Path(exc.filename).name if exc.filename else ""
+        msg = f"no se pudo usar {name}: {exc.strerror or exc}" if name else str(exc.strerror or exc)
+        return None if is_notification else _error(req_id, ENGINE_ERROR, msg)
     except Exception as exc:  # nunca tumbar el servidor por un fallo de un método
         print(f"error interno en {req['method']}: {exc!r}", file=sys.stderr)
         return None if is_notification else _error(req_id, ENGINE_ERROR, "error interno")
