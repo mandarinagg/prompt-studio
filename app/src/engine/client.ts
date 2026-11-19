@@ -1,6 +1,6 @@
 // Cliente tipado del engine: UI → Rust (`engine_call`) → engine Python por JSON-RPC.
 // Los tipos vienen de contract.gen.ts (generado desde los modelos Pydantic del engine).
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { Events, Methods } from "./contract.gen";
 
@@ -65,7 +65,17 @@ export function onEngineFailed(handler: (message: string) => void): Promise<Unli
   return listen<{ message: string }>("engine-failed", (e) => handler(e.payload.message));
 }
 
-/** URL para un archivo de `cache/` del proyecto (preview, miniatura) por el protocolo de assets. */
-export function cacheUrl(path: string): string {
-  return convertFileSrc(path);
+/**
+ * Preview o miniatura de `cache/` como blob URL (ADR-0010: bytes por IPC binario). Rust solo
+ * entrega archivos de la caché del proyecto abierto. Quien la usa la libera con
+ * `URL.revokeObjectURL` cuando la reemplaza.
+ */
+export async function cacheImage(path: string): Promise<string> {
+  try {
+    const bytes = await invoke<ArrayBuffer>("read_cache", { path });
+    return URL.createObjectURL(new Blob([bytes], { type: "image/jpeg" }));
+  } catch (err) {
+    const e = err as { message?: string; code?: number | null };
+    throw new EngineError(e.message ?? String(err), e.code ?? null);
+  }
 }

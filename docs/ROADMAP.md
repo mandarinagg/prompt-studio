@@ -52,8 +52,10 @@ subagentes: dos sets de casos y el proveedor LLM local.
 - **M2 (M):** sube de riesgo. El spike #5 mostró ~75% de planes correctos con el LLM solo, así
   que el proveedor de reglas (#15) y los evals (#16) pesan más de lo previsto. Se mantiene en
   M, pero con #15 como camino crítico.
-- **M3 (L):** sin cambios. La firma del instalador (#23) depende de terceros (certificado o
-  SignPath) y puede fijar la fecha de v0.1.
+- **M3 (L):** la estimación pasa de 6–10 a **~11–14 sesiones** (diseño de M3 §11). La
+  diferencia es el engine de proyecto (#55) y de jobs (#60), que no estaban contados. La firma
+  del instalador (#23) depende de terceros (certificado o SignPath) y puede fijar la fecha de
+  v0.1.
 
 | Milestone | Entregable | Tamaño | Release |
 |---|---|---|---|

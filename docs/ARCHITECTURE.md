@@ -6,7 +6,7 @@
 │  Biblioteca · Visor · Propiedades · Prompt · Plan · Historial · Timeline · Export    │
 │                ▲  tipos TS generados desde JSON Schema                               │
 └────────────────┼─────────────────────────────────────────────────────────────────────┘
-                 │ JSON-RPC (stdio)  — sin red, sin puertos abiertos
+                 │ JSON-RPC (stdio)  — sin red, sin puertos abiertos (RPC v1: ADR-0010)
 ┌────────────────▼──────────────── Engine (sidecar Python 3.14) ───────────────────────┐
 │  schema/      Pydantic: Plan, Operation, Project  → JSON Schema (fuente única)       │
 │  analyze/     descriptores deterministas (histograma, clipping, WB, EXIF)            │
@@ -29,6 +29,11 @@
   slider de la op *i* solo recalcula desde *i*.
 - **Proyecto (ADR-0009):** fotos por referencia (ruta + SHA-256), pila de ajustes por foto en
   orden canónico, historial por foto con snapshots, guardado atómico. Sin SQLite en v0.1.
+- **RPC v1 (ADR-0010):** métodos `project.*`, `asset.*`, `plan.create`, `preview.render` y
+  `thumbnail.get`, con params validados por Pydantic. El contrato sale en
+  `engine/schema/rpc-1.schema.json` y de ahí los tipos TS. Rust reenvía las notificaciones del
+  engine como eventos y lo relanza si se cae. La preview viaja como archivo de `cache/` leído por
+  Rust (`read_cache`, solo dentro de la caché del proyecto) y llega a la UI como blob.
 - **Catálogo cerrado:** el LLM no puede referenciar nada fuera del registro de operaciones.
 - **Rutas:** el engine solo lee de medios importados y escribe en el directorio del
   proyecto/export; toda ruta se normaliza y valida (anti path traversal).

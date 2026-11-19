@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
-  cacheUrl,
+  cacheImage,
   call,
   onEngineEvent,
   onEngineFailed,
@@ -17,7 +17,9 @@ import "./App.css";
 // Banco de pruebas del RPC v1 (#56): recorre proyecto → pedido → borrador → aplicar → undo con
 // el cliente tipado. No es la UI de v0.1: la reemplazan #57–#59.
 
-type BenchConfig = { photo: string; out: string; dir: string };
+let benchStarted = false; // StrictMode monta dos veces en desarrollo: el banco corre una sola
+
+type BenchConfig = { photo: string; out: string; dir: string; restart: boolean };
 
 function loadImage(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -31,8 +33,24 @@ function loadImage(src: string): Promise<void> {
 /** ADR-0010: cuánto tarda la preview desde la respuesta del engine hasta estar decodificada. */
 async function runBench(cfg: BenchConfig) {
   const name = `bench-${Date.now()}`;
-  await call("project.create", { dir: cfg.dir, name });
+  const info = await call("project.create", { dir: cfg.dir, name });
   const [asset] = (await call("project.import", { paths: [cfg.photo] })).added;
+  let restart: Record<string, unknown> | null = null;
+  if (cfg.restart) {
+    // Desde afuera se mata el proceso del engine; se espera el relanzamiento y se reabre.
+    const t = performance.now();
+    const attempt = await new Promise<number>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("no hubo relanzamiento")), 90_000);
+      onEngineRestarted((n) => {
+        clearTimeout(timer);
+        resolve(n);
+      });
+    });
+    const waited = performance.now() - t;
+    const t1 = performance.now();
+    const reopened = await call("project.open", { path: info.path });
+    restart = { attempt, waited_ms: waited, reopen_ms: performance.now() - t1, assets: reopened.assets.length };
+  }
   const samples: Record<string, unknown>[] = [];
   for (const long_side of [2048, 1024]) {
     for (let i = 0; i < 12; i++) {
@@ -40,12 +58,14 @@ async function runBench(cfg: BenchConfig) {
       const t0 = performance.now();
       const r = await call("preview.render", { asset: asset.id, stack, long_side });
       const t1 = performance.now();
-      await loadImage(cacheUrl(r.path));
+      const url = await cacheImage(r.path);
+      await loadImage(url);
+      URL.revokeObjectURL(url);
       const t2 = performance.now();
       samples.push({ long_side, i, ...r, path: undefined, call_ms: t1 - t0, load_ms: t2 - t1 });
     }
   }
-  await invoke("bench_report", { report: { photo_file: cfg.photo.split(/[\\/]/).pop(), samples } });
+  await invoke("bench_report", { report: { photo_file: cfg.photo.split(/[\\/]/).pop(), restart, samples } });
 }
 
 function App() {
@@ -61,7 +81,13 @@ function App() {
 
   useEffect(() => {
     invoke<BenchConfig | null>("bench_config").then((cfg) => {
-      if (cfg) runBench(cfg).catch((e) => setStatus(`banco: ${e.message}`));
+      if (cfg && !benchStarted) {
+        benchStarted = true;
+        runBench(cfg).catch((e) => {
+          setStatus(`banco: ${e.message}`);
+          invoke("bench_report", { report: { error: String(e?.message ?? e), code: e?.code ?? null } });
+        });
+      }
     });
     call("engine.version").then(
       (v) => setStatus(`pstudio ${v.pstudio} · Python ${v.python} · libvips ${v.libvips}`),
@@ -69,7 +95,7 @@ function App() {
     );
     const subs = [
       onEngineEvent("thumbnail.ready", (t) => {
-        if (t.path) setThumbs((m) => ({ ...m, [t.asset]: cacheUrl(t.path!) }));
+        if (t.path) cacheImage(t.path).then((url) => setThumbs((m) => ({ ...m, [t.asset]: url })));
       }),
       onEngineRestarted(async (n) => {
         setStatus(`El motor se reinició (intento ${n})`);
@@ -93,7 +119,10 @@ function App() {
     setProject(info);
     for (const a of info.assets) {
       const t = await call("thumbnail.get", { asset: a.id });
-      if (t.path) setThumbs((m) => ({ ...m, [a.id]: cacheUrl(t.path!) }));
+      if (t.path) {
+        const url = await cacheImage(t.path);
+        setThumbs((m) => ({ ...m, [a.id]: url }));
+      }
     }
   }
 
@@ -101,11 +130,16 @@ function App() {
     setCurrent(a);
     setPlan(null);
     setState(await call("asset.state", { asset: a.id }));
-    setPreview(cacheUrl((await call("preview.render", { asset: a.id, long_side: 1024 })).path));
+    await show(a.id);
   }
 
   async function show(asset: string, stack?: EditPlan) {
-    setPreview(cacheUrl((await call("preview.render", { asset, stack, long_side: 1024 })).path));
+    const r = await call("preview.render", { asset, stack, long_side: 1024 });
+    const url = await cacheImage(r.path);
+    setPreview((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return url;
+    });
   }
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>

@@ -34,7 +34,10 @@ pub struct EngineError {
 
 impl EngineError {
     fn local(message: impl Into<String>) -> Self {
-        Self { message: message.into(), code: None }
+        Self {
+            message: message.into(),
+            code: None,
+        }
     }
 }
 
@@ -49,7 +52,10 @@ impl EngineCommand {
     pub fn python(python: PathBuf) -> Self {
         // -I: ignora PYTHONPATH y el site del usuario del sistema.
         let args = ["-I", "-m", "pstudio", "rpc"].map(OsString::from).to_vec();
-        Self { program: python, args }
+        Self {
+            program: python,
+            args,
+        }
     }
 }
 
@@ -62,7 +68,11 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn spawn(command: &EngineCommand, on_event: OnEvent, on_exit: OnExit) -> std::io::Result<Self> {
+    pub fn spawn(
+        command: &EngineCommand,
+        on_event: OnEvent,
+        on_exit: OnExit,
+    ) -> std::io::Result<Self> {
         let mut cmd = Command::new(&command.program);
         cmd.args(&command.args)
             .stdin(Stdio::piped())
@@ -117,7 +127,12 @@ impl Engine {
     }
 
     /// Llamada bloqueante; usar desde un hilo de trabajo, nunca desde el hilo de UI.
-    pub fn call(&self, method: &str, params: Value, timeout: Duration) -> Result<Value, EngineError> {
+    pub fn call(
+        &self,
+        method: &str,
+        params: Value,
+        timeout: Duration,
+    ) -> Result<Value, EngineError> {
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
         let (tx, rx) = mpsc::channel();
         self.pending.lock().unwrap().insert(id, tx);
@@ -130,7 +145,9 @@ impl Engine {
             };
             if let Err(e) = writeln!(stdin, "{req}").and_then(|_| stdin.flush()) {
                 self.pending.lock().unwrap().remove(&id);
-                return Err(EngineError::local(format!("no se pudo escribir al engine: {e}")));
+                return Err(EngineError::local(format!(
+                    "no se pudo escribir al engine: {e}"
+                )));
             }
         }
         let msg = rx.recv_timeout(timeout).map_err(|_| {
@@ -140,7 +157,10 @@ impl Engine {
         match (msg.get("result"), msg.get("error")) {
             (Some(result), _) => Ok(result.clone()),
             (_, Some(err)) => Err(EngineError {
-                message: err["message"].as_str().unwrap_or("error del engine").to_string(),
+                message: err["message"]
+                    .as_str()
+                    .unwrap_or("error del engine")
+                    .to_string(),
                 code: err["code"].as_i64(),
             }),
             _ => Err(EngineError::local("respuesta inválida del engine")),
@@ -178,13 +198,19 @@ mod tests {
     /// Python para los engines falsos: `PSTUDIO_TEST_PYTHON` o `python` del PATH.
     fn fake(script: &str) -> Option<EngineCommand> {
         let python = std::env::var_os("PSTUDIO_TEST_PYTHON").unwrap_or_else(|| "python".into());
-        let ok = Command::new(&python).arg("--version").output().is_ok_and(|o| o.status.success());
+        let ok = Command::new(&python)
+            .arg("--version")
+            .output()
+            .is_ok_and(|o| o.status.success());
         if !ok {
             eprintln!("sin Python: se saltea el test");
             return None;
         }
         let args = vec!["-u".into(), "-c".into(), script.into()];
-        Some(EngineCommand { program: python.into(), args })
+        Some(EngineCommand {
+            program: python.into(),
+            args,
+        })
     }
 
     // Lee una petición, emite una notificación, responde y termina (como si se cayera).
@@ -197,7 +223,9 @@ print(json.dumps({"jsonrpc": "2.0", "id": req["id"], "result": "pong"}))
 
     #[test]
     fn forwards_events_and_reports_exit() {
-        let Some(cmd) = fake(NOTIFY_AND_DIE) else { return };
+        let Some(cmd) = fake(NOTIFY_AND_DIE) else {
+            return;
+        };
         let (ev_tx, ev_rx) = channel();
         let ev_tx = Mutex::new(ev_tx);
         let (exit_tx, exit_rx) = channel();
@@ -207,22 +235,33 @@ print(json.dumps({"jsonrpc": "2.0", "id": req["id"], "result": "pong"}))
             Box::new(move || exit_tx.send(()).unwrap()),
         )
         .unwrap();
-        let r = engine.call("ping", json!({}), Duration::from_secs(20)).unwrap();
+        let r = engine
+            .call("ping", json!({}), Duration::from_secs(20))
+            .unwrap();
         assert_eq!(r, json!("pong"));
         let ev = ev_rx.recv_timeout(Duration::from_secs(20)).unwrap();
         assert_eq!(ev["method"], "thumbnail.ready");
         assert_eq!(ev["params"]["asset"], "a");
-        exit_rx.recv_timeout(Duration::from_secs(20)).expect("on_exit al morir el engine");
+        exit_rx
+            .recv_timeout(Duration::from_secs(20))
+            .expect("on_exit al morir el engine");
     }
 
     #[test]
     fn pending_call_fails_fast_when_engine_dies() {
-        let Some(cmd) = fake("import sys; sys.stdin.readline()") else { return };
+        let Some(cmd) = fake("import sys; sys.stdin.readline()") else {
+            return;
+        };
         let engine = Engine::spawn(&cmd, Arc::new(|_| {}), Box::new(|| {})).unwrap();
         let start = std::time::Instant::now();
-        let err = engine.call("ping", json!({}), Duration::from_secs(30)).unwrap_err();
+        let err = engine
+            .call("ping", json!({}), Duration::from_secs(30))
+            .unwrap_err();
         assert_eq!(err.message, RESTARTED);
-        assert!(start.elapsed() < Duration::from_secs(15), "no debe esperar al timeout");
+        assert!(
+            start.elapsed() < Duration::from_secs(15),
+            "no debe esperar al timeout"
+        );
     }
 
     #[test]
@@ -236,15 +275,30 @@ sys.stdin.readline()
 "#;
         let Some(cmd) = fake(script) else { return };
         let engine = Engine::spawn(&cmd, Arc::new(|_| {}), Box::new(|| {})).unwrap();
-        let err = engine.call("asset.state", json!({}), Duration::from_secs(20)).unwrap_err();
-        assert_eq!(err, EngineError { message: "no hay un proyecto abierto".into(), code: Some(-32001) });
+        let err = engine
+            .call("asset.state", json!({}), Duration::from_secs(20))
+            .unwrap_err();
+        assert_eq!(
+            err,
+            EngineError {
+                message: "no hay un proyecto abierto".into(),
+                code: Some(-32001)
+            }
+        );
     }
 
     #[test]
     fn shutdown_does_not_call_on_exit() {
-        let Some(cmd) = fake("import sys; sys.stdin.read()") else { return };
+        let Some(cmd) = fake("import sys; sys.stdin.read()") else {
+            return;
+        };
         let (exit_tx, exit_rx) = channel();
-        let engine = Engine::spawn(&cmd, Arc::new(|_| {}), Box::new(move || exit_tx.send(()).unwrap())).unwrap();
+        let engine = Engine::spawn(
+            &cmd,
+            Arc::new(|_| {}),
+            Box::new(move || exit_tx.send(()).unwrap()),
+        )
+        .unwrap();
         engine.shutdown();
         assert!(exit_rx.recv_timeout(Duration::from_secs(2)).is_err());
     }
