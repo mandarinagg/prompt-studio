@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from pstudio.project import history
 from pstudio.project.stack import merge
 from pstudio.project.store import add_assets, create, relink
-from pstudio.rpc.server import INVALID_PARAMS, Params, RpcError, method
+from pstudio.rpc.server import ENGINE_ERROR, INVALID_PARAMS, Params, RpcError, method
 from pstudio.rpc.session import Session
 from pstudio.schema import Asset, EditPlan
 from pstudio.schema.plan import Resize
@@ -72,7 +72,7 @@ class UndoGroupResult(BaseModel):
 
 
 class CreateParams(Params):
-    dir: str
+    dir: str = Field(min_length=1)  # vacío sería la carpeta de trabajo del engine
     name: str
 
 
@@ -156,7 +156,10 @@ def _push(s: Session, asset: Asset, stack: EditPlan, label: str, group: str | No
 # ------------------------------------------------------------------------------------- project
 @method("project.create")
 def project_create(s: Session, p: CreateParams) -> ProjectInfo:
-    s.open(create(Path(p.dir), p.name))
+    folder = Path(p.dir)
+    if not folder.is_dir():
+        raise RpcError(ENGINE_ERROR, f"no existe la carpeta {folder.name}")
+    s.open(create(folder, p.name))
     return _info(s)
 
 

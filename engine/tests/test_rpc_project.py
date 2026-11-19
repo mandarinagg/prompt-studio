@@ -175,3 +175,11 @@ def test_relink(tmp_path, rpc):
     other = photo(tmp_path / "b.jpg", seed=9)
     err = rpc.error("project.relink", asset=asset, path=str(other))
     assert "no es la misma foto" in err["message"]
+
+
+def test_create_requires_an_existing_folder(tmp_path, rpc, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    assert rpc.error("project.create", dir="", name="P")["code"] == INVALID_PARAMS
+    err = rpc.error("project.create", dir=str(tmp_path / "no-existe"), name="P")
+    assert err["code"] == ENGINE_ERROR and "no existe la carpeta no-existe" in err["message"]
+    assert list(tmp_path.iterdir()) == []

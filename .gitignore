@@ -57,3 +57,6 @@ tests/fixtures/photos/
 
 # worktrees de subagentes de Claude Code (locales)
 .claude/worktrees/
+
+# Proyectos de prueba creados al correr la app
+*.pstudio/

@@ -555,6 +555,7 @@
       "additionalProperties": false,
       "properties": {
         "dir": {
+          "minLength": 1,
           "title": "Dir",
           "type": "string"
         },
