@@ -297,6 +297,9 @@ def main(argv: list[str] | None = None) -> None:
         "analyze", help="histograma, recorte y balance de blancos estimado (JSON)"
     )
     p_analyze.add_argument("image", help="imagen a analizar (no se modifica)")
+    from pstudio.project.cli import add_parser as add_project_parser
+
+    add_project_parser(sub)
     p_apply = sub.add_parser(
         "apply", help="aplica un plan a imágenes o carpetas y exporta copias (nunca el original)"
     )
@@ -360,3 +363,7 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(_cmd_eval(args))
     elif args.command == "analyze":
         sys.exit(_cmd_analyze(args))
+    elif args.command == "project":
+        from pstudio.project.cli import run as run_project
+
+        sys.exit(run_project(args))
