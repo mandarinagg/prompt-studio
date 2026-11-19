@@ -50,10 +50,15 @@ def plan_for(
     image: Path | None = None,
     provider: str = "auto",
     before_send: Callable[[str], None] | None = None,
+    descriptors: dict | None = None,
 ) -> PlanResult:
     """`before_send(texto)`: se llama antes de enviar algo fuera del equipo (proveedor nube),
-    con el texto exacto que se va a enviar, para mostrarlo al usuario."""
-    descriptors = image_descriptors(image) if image is not None else {}
+    con el texto exacto que se va a enviar, para mostrarlo al usuario.
+
+    `descriptors`: ya calculados (la app los saca del proxy de preview); si faltan y hay foto,
+    se analiza el original."""
+    if descriptors is None:
+        descriptors = image_descriptors(image) if image is not None else {}
     request = PlanRequest(prompt, descriptors, asset=image.name if image is not None else None)
     chosen = resolve_provider(provider)
     if chosen.name == "cloud" and before_send is not None and chosen.ready():

@@ -25,12 +25,15 @@ from pathlib import Path
 import pyvips
 from pydantic import BaseModel, ConfigDict
 
+from pstudio.analysis import analyze
+from pstudio.prompting.descriptors import describe
 from pstudio.render.preview import PreviewCache, Proxy, make_proxy, render_preview
 from pstudio.rpc.server import Notifier, event
 from pstudio.schema import Asset, EditPlan
 
 MAX_PROXIES = 4  # ~33 MB cada uno a 2048 px en float
 PREVIEW_QUALITY = 85
+ANALYSIS_PROXY = 1024  # el mismo que usa la preview mientras se arrastra un slider
 THUMB_SIZE = 320
 THUMB_QUALITY = 80
 
@@ -83,8 +86,12 @@ class Media:
     def __init__(self, notifier: Notifier | None) -> None:
         self.notifier = notifier
         self.cache = PreviewCache()
-        self._proxies: OrderedDict[tuple[str, str, int], Proxy] = OrderedDict()
+        # (asset, sha256, lado largo) → (proxy, tamaño del original)
+        self._proxies: OrderedDict[tuple[str, str, int], tuple[Proxy, tuple[int, int]]] = (
+            OrderedDict()
+        )
         self._last: dict[str, Path] = {}
+        self._descriptors: dict[tuple[str, str], dict] = {}
         self._counter = 0
         self._queue: queue.Queue[tuple[str, Path, Path] | None] = queue.Queue()
         self._pending: set[str] = set()
@@ -96,6 +103,7 @@ class Media:
         """Al abrir un proyecto: se descartan las previews de la sesión anterior."""
         self._proxies.clear()
         self._last.clear()
+        self._descriptors.clear()
         folder = cache_dir / "preview"
         if folder.is_dir():
             for f in folder.iterdir():
@@ -109,24 +117,25 @@ class Media:
             self._worker = None
 
     # ------------------------------------------------------------------ preview
-    def _proxy(self, asset: Asset, long_side: int) -> tuple[Proxy, float]:
+    def _proxy(self, asset: Asset, long_side: int) -> tuple[Proxy, tuple[int, int], float]:
+        """(proxy, tamaño del original, ms que tardó crearlo: 0 si ya estaba en memoria)."""
         key = (asset.id, asset.sha256, long_side)
-        proxy = self._proxies.get(key)
-        if proxy is not None:
+        entry = self._proxies.get(key)
+        if entry is not None:
             self._proxies.move_to_end(key)
-            return proxy, 0.0
+            return *entry, 0.0
         start = time.perf_counter()
-        proxy, _ = make_proxy(_check_file(asset), long_side)
-        self._proxies[key] = proxy
+        proxy, info = make_proxy(_check_file(asset), long_side)
+        self._proxies[key] = (proxy, (info.width, info.height))
         while len(self._proxies) > MAX_PROXIES:
             self._proxies.popitem(last=False)
-        return proxy, (time.perf_counter() - start) * 1000
+        return proxy, (info.width, info.height), (time.perf_counter() - start) * 1000
 
     def preview(
         self, cache_dir: Path, asset: Asset, stack: EditPlan, long_side: int
     ) -> PreviewImage:
         _check_file(asset)
-        proxy, proxy_ms = self._proxy(asset, long_side)
+        proxy, _, proxy_ms = self._proxy(asset, long_side)
         start = time.perf_counter()
         img = render_preview(self.cache, proxy, stack)
         img = img.copy_memory()
@@ -151,6 +160,22 @@ class Media:
             render_ms=round(render_ms, 2),
             encode_ms=round(encode_ms, 2),
         )
+
+    def descriptors(self, asset: Asset) -> dict:
+        """Descriptores para el planificador, medidos sobre un proxy de preview y cacheados.
+
+        `analyze` reduce a 512 px de todos modos: el proxy da los mismos planes que el original
+        (8 fotos reales × 7 pedidos, 56/56 iguales) sin hashear ni decodificar el original en
+        cada pedido (150–620 ms con 24–53 MP; presupuesto del borrador: 150 ms). Usa el proxy que
+        ya esté en memoria para esa foto; si no hay, crea uno de 1024 px.
+        """
+        key = (asset.id, asset.sha256)
+        if key not in self._descriptors:
+            cached = [k for k in self._proxies if k[:2] == key]
+            side = cached[-1][2] if cached else ANALYSIS_PROXY
+            proxy, (w, h), _ = self._proxy(asset, side)
+            self._descriptors[key] = describe(analyze(proxy.image), w, h)
+        return self._descriptors[key]
 
     # ------------------------------------------------------------------ miniaturas
     @staticmethod

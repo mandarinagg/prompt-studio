@@ -158,3 +158,35 @@ def test_thumbnail_missing_file_reports_error(rpc):
     ev = wait_event(rpc, "thumbnail.ready")
     assert ev["path"] is None and "falta el archivo f1.jpg" in ev["error"]
     rpc.files[1] = rpc.files[1].with_name("otra.jpg")
+
+
+def test_plan_create_analyzes_the_proxy_not_the_original(rpc, monkeypatch):
+    # Hashear y decodificar el original en cada pedido cuesta 150–620 ms con fotos de 24–53 MP
+    # (presupuesto del borrador: 150 ms). Se mide el proxy, que ya está en memoria.
+    import pstudio.prompting.planner as planner
+    from pstudio.analysis import analyze
+    from pstudio.prompting.descriptors import describe
+    from pstudio.render.io import decode
+
+    img, info = decode(rpc.files[0])
+    full = describe(analyze(img), info.width, info.height)
+
+    def boom(path):
+        raise AssertionError("no debe decodificar el original completo")
+
+    monkeypatch.setattr(planner, "image_descriptors", boom)
+    seen = {}
+    real = planner.make_plan
+
+    def spy(request, *args, **kwargs):
+        seen["r"] = request
+        return real(request, *args, **kwargs)
+
+    monkeypatch.setattr(planner, "make_plan", spy)
+    r = rpc("plan.create", prompt="más luz", asset=rpc.ids[0])
+    assert r["plan"] is not None
+    d = seen["r"].descriptors
+    assert (d["width"], d["height"]) == (full["width"], full["height"])
+    for key in ("mean_luminance", "exposure_ev", "median_luminance"):
+        assert d[key] == pytest.approx(full[key], abs=0.05), key
+    assert d["white_balance_estimate"] == full["white_balance_estimate"]

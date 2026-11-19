@@ -58,13 +58,14 @@ def plan_create(s: Session, p: PlanParams) -> PlanCreated:
     from pstudio.prompting.planner import plan_for
 
     asset = s.asset(p.asset) if p.asset is not None else None
-    image = None
-    if asset is not None:
-        image = Path(asset.path)
-        if not image.is_file():
-            raise RpcError(ENGINE_ERROR, f"falta el archivo {image.name}")
+    image, descriptors = None, None
     try:
-        r = plan_for(p.prompt, image, p.provider)
+        if asset is not None:
+            image = Path(asset.path)
+            descriptors = s.media.descriptors(asset)
+        r = plan_for(p.prompt, image, p.provider, descriptors=descriptors)
+    except MissingFile as e:
+        raise _missing(e) from e
     except ProviderUnavailable as e:
         raise RpcError(ENGINE_ERROR, str(e)) from e
     except (ValueError, pyvips.Error) as e:
