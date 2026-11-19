@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 
 from pstudio.project.store import CACHE_DIR, PROJECT_FILE, open_project, save
+from pstudio.rpc.media import Media
 from pstudio.rpc.server import ENGINE_ERROR, NO_PROJECT, PROJECT_CHANGED, Notifier, RpcError
 from pstudio.schema import Asset, Project
 
@@ -30,6 +31,7 @@ class Session:
         self.project: Project | None = None
         self.path: Path | None = None  # carpeta <Nombre>.pstudio
         self._stamp: tuple[int, int] | None = None
+        self.media = Media(notifier)
 
     # ------------------------------------------------------------------ proyecto
     def open(self, path: Path) -> Project:
@@ -44,7 +46,7 @@ class Session:
         return project
 
     def on_open(self) -> None:
-        """Gancho para limpiar cachés al cambiar de proyecto (lo usan las previews)."""
+        self.media.reset(self.cache_dir)
 
     @property
     def cache_dir(self) -> Path:
@@ -81,4 +83,4 @@ class Session:
         self._stamp = _stamp(file)
 
     def close(self) -> None:
-        pass
+        self.media.close()
