@@ -9,8 +9,20 @@ from pstudio.schema.plan import (
     Unsupported,
     json_schema,
 )
+from pstudio.schema.project import (
+    PROJECT_SCHEMA_VERSION,
+    Asset,
+    HistoryEntry,
+    Project,
+    project_json_schema,
+)
 
 __all__ = [
+    "PROJECT_SCHEMA_VERSION",
+    "Asset",
+    "HistoryEntry",
+    "Project",
+    "project_json_schema",
     "OP_NAMES",
     "SCHEMA_VERSION",
     "EditPlan",
