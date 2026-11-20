@@ -1,0 +1,254 @@
+/* ---- Lista de fotos: cada fila abre el editor ---- */
+button.asset {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+}
+button.asset:not(:disabled):hover {
+  background: var(--surface);
+}
+button.asset:disabled {
+  cursor: default;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.topbar-spacer {
+  flex: 1;
+}
+
+/* ---- Editor ---- */
+.editor-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  min-height: 0;
+}
+.compare.is-on {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+/* El visor: el fondo más oscuro de la app, para que la foto sea lo único con color. */
+.viewer {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #141414;
+  user-select: none;
+}
+.viewer.is-actual {
+  overflow: auto;
+  place-items: start;
+  cursor: grab;
+}
+.viewer.is-actual:active {
+  cursor: grabbing;
+}
+.viewer.is-actual .viewer-stage {
+  margin: auto;
+}
+.viewer-stage {
+  position: relative;
+  flex: none;
+}
+.viewer-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.viewer-note {
+  color: var(--text-faint);
+  font-size: var(--fs-sm);
+}
+.viewer-error {
+  color: var(--danger);
+  max-width: 48ch;
+  text-align: center;
+}
+.viewer-chip {
+  position: absolute;
+  top: var(--sp-2);
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-sm);
+  background: rgba(20, 20, 20, 0.75);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  pointer-events: none;
+}
+.viewer-chip-left {
+  left: var(--sp-2);
+}
+.viewer-chip-right {
+  right: var(--sp-2);
+}
+.viewer-stats {
+  position: absolute;
+  left: var(--sp-2);
+  bottom: var(--sp-2);
+  color: var(--text-faint);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.split-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  margin-left: -12px;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.split-handle::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 11px;
+  width: 2px;
+  background: var(--text);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+.split-handle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: var(--text);
+}
+.split-handle:focus-visible::after {
+  box-shadow: var(--focus);
+}
+
+/* Marco de recorte: lo de afuera se oscurece; se arrastra entero. */
+.crop-frame {
+  position: absolute;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  outline: 1px solid var(--text);
+  cursor: move;
+  touch-action: none;
+}
+.viewer-stage:has(.crop-frame) {
+  overflow: hidden;
+}
+.crop-frame:focus-visible {
+  outline: 2px solid var(--accent-strong);
+}
+.crop-grid {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to right, transparent 33.2%, rgba(255, 255, 255, 0.35) 33.3%, transparent 33.5%,
+      transparent 66.5%, rgba(255, 255, 255, 0.35) 66.6%, transparent 66.8%),
+    linear-gradient(to bottom, transparent 33.2%, rgba(255, 255, 255, 0.35) 33.3%, transparent 33.5%,
+      transparent 66.5%, rgba(255, 255, 255, 0.35) 66.6%, transparent 66.8%);
+  pointer-events: none;
+}
+
+/* ---- Panel de ajustes ---- */
+.panel {
+  min-height: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+}
+.adjust {
+  display: grid;
+  padding: var(--sp-3) var(--sp-4) var(--sp-5);
+}
+.panel-title {
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.group {
+  border-top: 1px solid var(--line);
+}
+.group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 44px;
+}
+.group-head .btn {
+  height: 26px;
+  padding: 0 var(--sp-3);
+}
+.group-toggle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.group-toggle > svg {
+  color: var(--text-muted);
+  transition: transform var(--t-fast) var(--ease);
+}
+.group.is-open .group-toggle > svg {
+  transform: rotate(90deg);
+}
+.group-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.group-body {
+  display: grid;
+  gap: var(--sp-4);
+  padding-bottom: var(--sp-4);
+}
+.geometry {
+  display: grid;
+  gap: var(--sp-3);
+}
+.geometry-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.geometry .btn {
+  height: 30px;
+  padding: 0 var(--sp-3);
+}
+.adjust-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 1100px) {
+  .editor-body {
+    grid-template-columns: minmax(0, 1fr) 280px;
+  }
+}

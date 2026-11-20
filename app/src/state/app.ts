@@ -52,6 +52,8 @@ export interface AppState {
   createProject(req: CreateRequest): Promise<void>;
   importPhotos(paths: string[]): Promise<void>;
   closeProject(): Promise<void>;
+  /** Vuelve a pedir las fotos del proyecto (al salir del editor cambian las marcas). */
+  refreshProject(): Promise<void>;
   forgetRecent(path: string): Promise<void>;
   onRestarted(): Promise<void>;
   onFailed(message: string): void;
@@ -201,6 +203,17 @@ export function createAppStore(api: Api): StoreApi<AppState> {
       }
       set({ project: null });
       await get().loadRecents();
+    },
+
+    async refreshProject() {
+      const path = get().project?.path;
+      if (!path) return;
+      try {
+        const project = await api.call("project.info");
+        if (get().project?.path === path) set({ project });
+      } catch {
+        // Queda la lista anterior.
+      }
     },
 
     async forgetRecent(path) {

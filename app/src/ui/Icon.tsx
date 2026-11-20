@@ -7,6 +7,13 @@ const PATHS = {
   alert: "M10 3.5l7 12.5H3zM10 8.5v3.5M10 14.2v.1",
   check: "M4.5 10.5l3.5 3.5 7.5-8",
   back: "M12 4.5L6.5 10l5.5 5.5",
+  chevron: "M7.5 5l5 5-5 5",
+  undo: "M7.5 5L4 8.5 7.5 12M4.5 8.5h7a4 4 0 0 1 0 8H9",
+  redo: "M12.5 5L16 8.5 12.5 12M15.5 8.5h-7a4 4 0 0 0 0 8H11",
+  compare: "M10 3.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 1 0 0-13zM10 3.5v13M10 6.5l3.5 3.5M10 10.5l3 3",
+  rotateLeft: "M4.5 7.5A6 6 0 1 1 4 11M4.5 3.5v4h4",
+  rotateRight: "M15.5 7.5A6 6 0 1 0 16 11M15.5 3.5v4h-4",
+  crop: "M6 2.5V14h11.5M2.5 6H14v11.5",
 } as const;
 
 export type IconName = keyof typeof PATHS;

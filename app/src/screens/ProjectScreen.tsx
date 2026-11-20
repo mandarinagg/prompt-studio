@@ -1,10 +1,10 @@
-import { useApp } from "../state/store";
+import { editorStore, useApp } from "../state/store";
 import { IconButton } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 
 /**
- * Proyecto abierto: barra superior y las fotos del proyecto. La biblioteca con miniaturas,
- * selección y editor se construye sobre esta pantalla.
+ * Proyecto abierto: barra superior y las fotos del proyecto; clic o Enter abre una en el editor.
+ * La biblioteca con miniaturas y selección (#63) se construye sobre esta pantalla.
  */
 export function ProjectScreen({ dragging }: { dragging: boolean }) {
   const project = useApp((s) => s.project)!;
@@ -35,11 +35,18 @@ export function ProjectScreen({ dragging }: { dragging: boolean }) {
         ) : (
           <ul className="asset-list" aria-label="Fotos del proyecto">
             {project.assets.map((a) => (
-              <li key={a.id} className={`asset ${a.missing ? "is-missing" : ""}`}>
-                <Icon name={a.missing ? "alert" : "photo"} size={16} />
-                <span className="asset-file">{a.file}</span>
-                {a.edited && <span className="badge">Editada</span>}
-                {a.missing && <span className="badge badge-warn">No se encuentra</span>}
+              <li key={a.id}>
+                <button
+                  type="button"
+                  className={`asset ${a.missing ? "is-missing" : ""}`}
+                  disabled={a.missing}
+                  onClick={() => editorStore.getState().open(a)}
+                >
+                  <Icon name={a.missing ? "alert" : "photo"} size={16} />
+                  <span className="asset-file">{a.file}</span>
+                  {a.edited && <span className="badge">Editada</span>}
+                  {a.missing && <span className="badge badge-warn">No se encuentra</span>}
+                </button>
               </li>
             ))}
           </ul>
