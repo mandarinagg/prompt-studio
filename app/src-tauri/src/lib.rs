@@ -154,7 +154,7 @@ fn resolve_cache_file(cache_dir: Option<&Path>, path: &Path) -> Result<PathBuf, 
 }
 
 /// Preview o miniatura como bytes por IPC binario; la UI la muestra con un blob URL (ADR-0010:
-/// 4–5 ms más rápido que el protocolo de assets, y sin abrir un protocolo de archivos).
+/// mismo rendimiento que el protocolo de assets, sin abrir un protocolo de archivos).
 #[tauri::command]
 async fn read_cache(
     state: tauri::State<'_, AppState>,
@@ -225,6 +225,7 @@ fn bench_report(app: AppHandle, report: Value) -> Result<(), String> {
 pub fn run() {
     PROCESS_START.get_or_init(Instant::now);
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .manage(AppState {
             engine: Mutex::new(None),
             command: Mutex::new(None),

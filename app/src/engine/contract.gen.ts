@@ -64,6 +64,10 @@ export interface Methods {
     params: PreviewParams;
     result: PreviewImage;
   };
+  "project.close": {
+    params: NoParams;
+    result: null;
+  };
   "project.create": {
     params: CreateParams;
     result: ProjectInfo;
@@ -83,6 +87,14 @@ export interface Methods {
   "project.relink": {
     params: RelinkParams;
     result: AssetSummary;
+  };
+  "recent.forget": {
+    params: ForgetParams;
+    result: RecentList;
+  };
+  "recent.list": {
+    params: NoParams;
+    result: RecentList;
   };
   "thumbnail.get": {
     params: ThumbParams;
@@ -389,6 +401,18 @@ export interface OpenParams {
 export interface RelinkParams {
   asset: string;
   path: string;
+}
+export interface ForgetParams {
+  path: string;
+}
+export interface RecentList {
+  items: RecentProject[];
+}
+export interface RecentProject {
+  path: string;
+  name: string;
+  opened_at: string;
+  exists: boolean;
 }
 export interface ThumbParams {
   asset: string;

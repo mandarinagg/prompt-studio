@@ -42,6 +42,7 @@ jobs:
       # Si falla: `pnpm gen:types` y commitear src/engine/contract.gen.ts.
       - run: pnpm gen:types && git diff --exit-code -- src/engine/contract.gen.ts
       - run: pnpm typecheck
+      - run: pnpm test
 
   rust:
     runs-on: windows-latest
