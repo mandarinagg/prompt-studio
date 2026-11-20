@@ -238,3 +238,30 @@ def test_failed_import_is_not_half_applied(tmp_path, rpc, monkeypatch):
     assert rpc("project.info")["assets"] == []
     rpc("project.import", paths=files[:1])
     assert len(stored(info)["assets"]) == 1
+
+
+def test_open_and_create_register_recents(tmp_path, rpc):
+    a = rpc("project.create", dir=str(tmp_path), name="A")
+    rpc("project.create", dir=str(tmp_path), name="B")
+    rpc("project.open", path=a["path"])
+    items = rpc("recent.list")["items"]
+    assert [i["name"] for i in items] == ["A", "B"]
+    assert items[0]["path"] == a["path"] and items[0]["exists"] is True
+    left = rpc("recent.forget", path=a["path"])["items"]
+    assert [i["name"] for i in left] == ["B"]
+
+
+def test_recents_write_failure_does_not_break_open(tmp_path, rpc, monkeypatch):
+    blocker = tmp_path / "no-es-carpeta"
+    blocker.write_text("x")
+    monkeypatch.setenv("PSTUDIO_CONFIG_DIR", str(blocker / "cfg"))
+    info = rpc("project.create", dir=str(tmp_path), name="A")
+    assert rpc("project.open", path=info["path"])["name"] == "A"
+    assert rpc("recent.list")["items"] == []
+
+
+def test_close_project(tmp_path, rpc):
+    rpc("project.create", dir=str(tmp_path), name="A")
+    assert rpc("project.close") is None
+    assert rpc.error("project.info")["code"] == NO_PROJECT
+    assert rpc("project.close") is None  # sin proyecto: no hace nada

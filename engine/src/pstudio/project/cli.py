@@ -50,6 +50,9 @@ def add_parser(sub: argparse._SubParsersAction) -> None:
         c.add_argument("project")
         c.add_argument("asset")
 
+    rc = ps.add_parser("recent", help="proyectos abiertos hace poco en la app")
+    rc.add_argument("--json", action="store_true")
+
     rl = ps.add_parser("relink", help="ubica una foto que se movió (verifica el hash)")
     rl.add_argument("project")
     rl.add_argument("asset")
@@ -88,6 +91,7 @@ _VERBS = {
     "undo": "guardar",
     "redo": "guardar",
     "relink": "ubicar",
+    "recent": "leer",
     "export": "exportar a",
 }
 
@@ -134,6 +138,20 @@ def _list(args: argparse.Namespace) -> int:
     for r in rows:
         flags = " ".join(f for f, on in (("editada", r["edited"]), ("falta", r["missing"])) if on)
         print(f"{r['id']}  {r['file']}  {flags}".rstrip())
+    return 0
+
+
+def _recent(args: argparse.Namespace) -> int:
+    from pstudio import recent
+
+    items = recent.list_recent()
+    if args.json:
+        print(json.dumps([i.model_dump() for i in items], ensure_ascii=False, indent=2))
+        return 0
+    if not items:
+        print("no hay proyectos recientes")
+    for i in items:
+        print(f"{i.name}  {i.path}" + ("" if i.exists else "  (no encontrado)"))
     return 0
 
 
@@ -239,5 +257,6 @@ _COMMANDS = {
     "undo": _step,
     "redo": _step,
     "relink": _relink,
+    "recent": _recent,
     "export": _export,
 }

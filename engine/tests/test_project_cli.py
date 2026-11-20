@@ -122,3 +122,20 @@ def test_project_cli_os_errors_have_no_traceback(tmp_path, capsys):
     run(["add", proj, str(photo(tmp_path / "a.jpg"))], capsys)
     code, _, err = run(["export", proj, "-o", str(blocker)], capsys)
     assert code == 2 and "Traceback" not in err and "no se pudo" in err
+
+
+def test_project_recent(tmp_path, capsys):
+    from pstudio import recent
+
+    code, out, _ = run(["recent"], capsys)
+    assert code == 0 and "no hay proyectos recientes" in out
+    a = tmp_path / "A.pstudio"
+    a.mkdir()
+    recent.touch(a, "A")
+    recent.touch(tmp_path / "B.pstudio", "B")  # ya no existe
+    code, out, _ = run(["recent"], capsys)
+    lines = out.strip().splitlines()
+    assert lines[0].startswith("B  ") and lines[0].endswith("(no encontrado)")
+    assert lines[1] == f"A  {a.resolve()}"
+    code, out, _ = run(["recent", "--json"], capsys)
+    assert [i["name"] for i in json.loads(out)] == ["B", "A"]

@@ -8,9 +8,11 @@ falla con un mensaje claro; el usuario la repite sobre el proyecto actualizado.
 
 from __future__ import annotations
 
+import contextlib
 import os
 from pathlib import Path
 
+from pstudio import recent
 from pstudio.project.store import CACHE_DIR, PROJECT_FILE, open_project, save
 from pstudio.rpc.media import Media
 from pstudio.rpc.server import ENGINE_ERROR, NO_PROJECT, PROJECT_CHANGED, Notifier, RpcError
@@ -43,7 +45,14 @@ class Session:
         self._stamp = _stamp(path / PROJECT_FILE)
         (path / CACHE_DIR).mkdir(exist_ok=True)
         self.on_open()
+        with contextlib.suppress(OSError):  # los recientes son una comodidad: nunca impiden abrir
+            recent.touch(path, project.name)
         return project
+
+    def close_project(self) -> None:
+        if self.path is not None:
+            self.media.reset(self.cache_dir)
+        self.project, self.path, self._stamp = None, None, None
 
     def on_open(self) -> None:
         self.media.reset(self.cache_dir)

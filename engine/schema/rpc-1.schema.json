@@ -232,6 +232,22 @@
           ],
           "additionalProperties": false
         },
+        "project.close": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/NoParams"
+            },
+            "result": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
         "project.create": {
           "type": "object",
           "properties": {
@@ -312,6 +328,38 @@
           ],
           "additionalProperties": false
         },
+        "recent.forget": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/ForgetParams"
+            },
+            "result": {
+              "$ref": "#/$defs/RecentList"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "recent.list": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/NoParams"
+            },
+            "result": {
+              "$ref": "#/$defs/RecentList"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
         "thumbnail.get": {
           "type": "object",
           "properties": {
@@ -344,11 +392,14 @@
         "ping",
         "plan.create",
         "preview.render",
+        "project.close",
         "project.create",
         "project.import",
         "project.info",
         "project.open",
         "project.relink",
+        "recent.forget",
+        "recent.list",
         "thumbnail.get"
       ],
       "additionalProperties": false
@@ -963,6 +1014,20 @@
       "title": "Exposure",
       "type": "object"
     },
+    "ForgetParams": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "ForgetParams",
+      "type": "object"
+    },
     "GroupParams": {
       "additionalProperties": false,
       "properties": {
@@ -1389,6 +1454,50 @@
         "assets"
       ],
       "title": "ProjectInfo",
+      "type": "object"
+    },
+    "RecentList": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/RecentProject"
+          },
+          "title": "Items",
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "title": "RecentList",
+      "type": "object"
+    },
+    "RecentProject": {
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "opened_at": {
+          "title": "Opened At",
+          "type": "string"
+        },
+        "exists": {
+          "title": "Exists",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path",
+        "name",
+        "opened_at",
+        "exists"
+      ],
+      "title": "RecentProject",
       "type": "object"
     },
     "Rect": {

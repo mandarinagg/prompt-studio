@@ -101,7 +101,14 @@ def _expand(paths: list[Path], recursive: bool) -> list[Path]:
         p = Path(p).resolve()
         if p.is_dir():
             found = p.rglob("*") if recursive else p.iterdir()
-            files.extend(sorted((f for f in found if f.is_file()), key=lambda f: str(f).lower()))
+            # La caché de un proyecto guardado entre las fotos no son fotos del usuario.
+            found = (
+                f
+                for f in found
+                if f.is_file()
+                and not any(d.endswith(PROJECT_SUFFIX) for d in f.relative_to(p).parts[:-1])
+            )
+            files.extend(sorted(found, key=lambda f: str(f).lower()))
         else:
             files.append(p)
     return files
