@@ -376,6 +376,7 @@ export interface PlanCreated {
 export interface DraftParams {
   asset: string;
   plan: EditPlan;
+  stack?: EditPlan | null;
 }
 export interface PlanDraft {
   draft: EditPlan;

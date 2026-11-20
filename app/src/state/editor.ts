@@ -2,8 +2,9 @@
 // previews (después y antes) y el modo recorte. Recibe la API por parámetro para probarlo sin
 // Tauri; las previews pasan por el bucle "gana el último" (preview.ts).
 import { createStore, type StoreApi } from "zustand/vanilla";
-import type { AssetSummary, call as engineCall, EditPlan, StackState } from "../engine/client";
+import type { AssetSummary, call as engineCall, EditPlan, Resize, StackState } from "../engine/client";
 import { findOp, normalize, withoutCrop } from "../lib/stack";
+import { clampEdit, effectivePlan, hasIncluded, rowAdjustment, rowsOf, visibleOps, type PlanState } from "./draft";
 import { createPreviewLoop, type PreviewJob, type PreviewResult } from "./preview";
 
 export interface EditorApi {
@@ -51,6 +52,10 @@ export interface EditorState {
   /** Último tiempo de preview (ida y vuelta, ms) y su resolución; para medir en desarrollo. */
   stats: { ms: number; side: number } | null;
   error: string | null;
+  /** El plan del último pedido, mientras se revisa (antes de Aplicar o Descartar). */
+  plan: PlanState | null;
+  /** Sugerencia de tamaño del último plan aplicado en esta foto (va al export, no a la pila). */
+  exportHint: Resize | null;
 
   open(asset: AssetSummary): Promise<void>;
   close(): void;
@@ -67,6 +72,17 @@ export interface EditorState {
   setCropping(on: boolean): void;
   setZoom(zoom: Zoom): void;
   setViewport(width: number, height: number): void;
+  /** Pide un plan para el pedido y lo muestra como borrador, sin guardarlo. */
+  ask(prompt: string): Promise<void>;
+  /** Responde la pregunta del plan: se agrega al pedido y se vuelve a planificar. */
+  answer(text: string): Promise<void>;
+  toggleRow(index: number): void;
+  /** Cambia el valor de una fila (unidades del slider); NaN vuelve al valor del plan. */
+  editRow(index: number, value: number): void;
+  /** Fusiona las filas incluidas en la pila (una entrada "Pedido: …"). */
+  applyPlan(): Promise<void>;
+  /** Vuelve a la pila sin el borrador; si estaba pensando, la respuesta se ignora. */
+  discardPlan(): void;
 }
 
 const VERBS = { "asset.undo": "deshacer", "asset.redo": "rehacer", "asset.reset": "restablecer" } as const;
@@ -105,9 +121,68 @@ export function createEditorStore(api: EditorApi): StoreApi<EditorState> {
     const shownStack = (stack: EditPlan) => normalize(get().cropping ? withoutCrop(stack) : stack);
 
     // Hasta saber la pila guardada no se pide nada: se vería la foto sin editar.
+    // Con un plan abierto se ve el borrador (pila ⊕ plan), no la pila.
     const requestAfter = (longSide = side()) => {
-      const { asset, stack, saved } = get();
-      if (asset && saved) loop.request({ kind: "after", asset: asset.id, stack: shownStack(stack), longSide });
+      const { asset, stack, saved, plan } = get();
+      const shown = plan?.draft ?? stack;
+      if (asset && saved) loop.request({ kind: "after", asset: asset.id, stack: shownStack(shown), longSide });
+    };
+
+    // Pedidos y borrador, cada uno con "gana el último": `planGen` invalida respuestas de
+    // plan.create (y borradores de un plan anterior); `draftGen`, borradores viejos del mismo
+    // plan. Como mucho un plan.draft en vuelo y uno pendiente, como las previews.
+    let planGen = 0;
+    let draftGen = 0;
+    let draftBusy = false;
+    let draftQueued: { longSide?: number } | null = null;
+    let applying = false;
+
+    const dropPlan = () => {
+      planGen++;
+      draftGen++;
+      draftQueued = null;
+    };
+
+    const setPlan = (patch: Partial<PlanState>) => {
+      const plan = get().plan;
+      if (plan) set({ plan: { ...plan, ...patch } });
+    };
+
+    const runDraft = async (longSide?: number) => {
+      const { asset, plan, stack } = get();
+      if (!asset || !plan || plan.status !== "ready") return;
+      const gen = draftGen;
+      const pgen = planGen;
+      draftBusy = true;
+      try {
+        const r = await api.call("plan.draft", { asset: asset.id, plan: effectivePlan(plan), stack: normalize(stack) });
+        if (gen === draftGen && pgen === planGen && get().asset?.id === asset.id) {
+          setPlan({ draft: r.draft, exportHint: r.export_hint });
+          requestAfter(longSide);
+        }
+      } catch (err) {
+        if (gen === draftGen && pgen === planGen) api.notify("error", `No se pudo mostrar el plan: ${tail(err)}`);
+      } finally {
+        draftBusy = false;
+        const queued = draftQueued;
+        draftQueued = null;
+        if (queued) void runDraft(queued.longSide);
+      }
+    };
+
+    /** Vuelve a mostrar lo que corresponde: sin plan, la pila; con plan, pila ⊕ plan recalculado. */
+    const refresh = (longSide?: number) => {
+      const plan = get().plan;
+      draftGen++;
+      if (!plan || plan.status !== "ready") return requestAfter(longSide);
+      if (!visibleOps(plan)) {
+        // Nada visible (todo destildado, solo "no disponible" o solo resize): se ve la pila.
+        draftQueued = null;
+        if (plan.draft) setPlan({ draft: null });
+        return requestAfter(longSide);
+      }
+      if (draftBusy) draftQueued = { longSide };
+      else void runDraft(longSide);
     };
 
     const requestBefore = () => {
@@ -140,7 +215,7 @@ export function createEditorStore(api: EditorApi): StoreApi<EditorState> {
         const s = await api.call(method, { asset: asset.id });
         if (get().asset?.id !== asset.id) return;
         apply(s);
-        if (s.changed) requestAfter();
+        if (s.changed) refresh();
       } catch (err) {
         api.notify("error", `No se pudo ${VERBS[method]}: ${tail(err)}`);
       }
@@ -157,27 +232,55 @@ export function createEditorStore(api: EditorApi): StoreApi<EditorState> {
       viewport: { width: 0, height: 0 },
       stats: null,
       error: null,
+      plan: null,
+      exportHint: null,
 
       async open(asset) {
         loop.dispose();
-        set({ asset, saved: null, stack: {}, after: null, before: null, cropping: false, zoom: "fit", error: null });
+        dropPlan();
+        set({
+          asset,
+          saved: null,
+          stack: {},
+          after: null,
+          before: null,
+          cropping: false,
+          zoom: "fit",
+          error: null,
+          plan: null,
+          exportHint: null,
+        });
         await load();
       },
 
       close() {
         loop.dispose();
-        set({ asset: null, saved: null, stack: {}, after: null, before: null, cropping: false, error: null });
+        dropPlan();
+        set({
+          asset: null,
+          saved: null,
+          stack: {},
+          after: null,
+          before: null,
+          cropping: false,
+          error: null,
+          plan: null,
+          exportHint: null,
+        });
       },
 
       async reload() {
         loop.reset();
+        // El motor se reinició: el borrador puede no corresponder a la pila; se descarta.
+        dropPlan();
+        set({ plan: null });
         await load();
       },
 
       live(stack) {
         set({ stack });
         // Al 100% se arrastra a la resolución completa: con 1024 la foto se achicaría a la mitad.
-        requestAfter(get().zoom === "actual" ? side() : DRAG_SIDE);
+        refresh(get().zoom === "actual" ? side() : DRAG_SIDE);
       },
 
       async commit(stack, label) {
@@ -198,7 +301,7 @@ export function createEditorStore(api: EditorApi): StoreApi<EditorState> {
           if (saved && get().stack === stack) set({ stack: saved.stack });
           api.notify("error", `No se pudo guardar el ajuste: ${tail(err)}`);
         }
-        requestAfter();
+        refresh();
       },
 
       undo: () => step("asset.undo"),
@@ -216,6 +319,93 @@ export function createEditorStore(api: EditorApi): StoreApi<EditorState> {
         set({ zoom });
         requestAfter();
         requestBefore();
+      },
+
+      async ask(prompt) {
+        const text = prompt.trim();
+        const asset = get().asset;
+        if (!text || !asset) return;
+        const hadDraft = !!get().plan?.draft;
+        dropPlan();
+        const gen = planGen;
+        const savedAt = get().saved;
+        set({ plan: { prompt: text, status: "thinking", rows: [], draft: null } });
+        if (hadDraft) requestAfter();
+        try {
+          const r = await api.call("plan.create", { prompt: text, asset: asset.id });
+          if (gen !== planGen || get().asset?.id !== asset.id) return;
+          const plan: PlanState = {
+            prompt: text,
+            status: "ready",
+            result: r,
+            rows: rowsOf(r.plan),
+            draft: null,
+            exportHint: r.export_hint,
+          };
+          // El borrador de plan.create vale si la pila no cambió mientras se pensaba.
+          const current = get().saved === savedAt && get().stack === savedAt?.stack;
+          if (visibleOps(plan) && current) plan.draft = r.draft;
+          set({ plan });
+          if (plan.draft) requestAfter();
+          else refresh();
+        } catch (err) {
+          if (gen !== planGen || get().asset?.id !== asset.id) return;
+          set({ plan: { prompt: text, status: "error", rows: [], draft: null, error: `No se pudo planificar: ${tail(err)}` } });
+        }
+      },
+
+      async answer(text) {
+        const plan = get().plan;
+        if (!plan || !text.trim()) return;
+        await get().ask(`${plan.prompt} ${text.trim()}`);
+      },
+
+      toggleRow(index) {
+        const plan = get().plan;
+        if (!plan || plan.status !== "ready") return;
+        setPlan({ rows: plan.rows.map((r) => (r.index === index ? { ...r, included: !r.included } : r)) });
+        refresh();
+      },
+
+      editRow(index, value) {
+        const plan = get().plan;
+        const row = plan?.rows.find((r) => r.index === index);
+        const a = row && rowAdjustment(row.op);
+        if (!plan || plan.status !== "ready" || !row || !a) return;
+        const edited = clampEdit(a, value);
+        setPlan({ rows: plan.rows.map((r) => (r.index === index ? { ...r, edited } : r)) });
+        refresh();
+      },
+
+      async applyPlan() {
+        const { asset, plan } = get();
+        if (!asset || !plan || !hasIncluded(plan) || applying) return;
+        applying = true;
+        const gen = planGen;
+        try {
+          const label = `Pedido: ${plan.prompt}`.slice(0, 200);
+          const s = await api.call("asset.apply_plan", { asset: asset.id, plan: effectivePlan(plan), label });
+          if (get().asset?.id !== asset.id) return;
+          apply(s);
+          if (s.export_hint) set({ exportHint: s.export_hint });
+          // Si mientras se aplicaba llegó otro pedido, ese sigue abierto sobre la pila nueva.
+          if (gen === planGen) {
+            dropPlan();
+            set({ plan: null });
+          }
+          refresh();
+        } catch (err) {
+          api.notify("error", `No se pudo aplicar el plan: ${tail(err)}`);
+        } finally {
+          applying = false;
+        }
+      },
+
+      discardPlan() {
+        const hadDraft = !!get().plan?.draft;
+        dropPlan();
+        set({ plan: null });
+        if (hadDraft) requestAfter();
       },
 
       setViewport(width, height) {

@@ -93,17 +93,19 @@ def plan_create(s: Session, p: PlanParams) -> PlanCreated:
 class DraftParams(Params):
     asset: str
     plan: EditPlan
+    stack: EditPlan | None = None  # sin `stack`: la pila guardada (con: la que se arrastra)
 
 
 class PlanDraft(BaseModel):
-    draft: EditPlan  # pila actual ⊕ plan
+    draft: EditPlan  # pila ⊕ plan
     export_hint: Resize | None
 
 
 @method("plan.draft")
 def plan_draft(s: Session, p: DraftParams) -> PlanDraft:
     """Recalcula el borrador cuando cambian las casillas, los valores o la pila. No guarda nada."""
-    merged = merge(s.asset(p.asset).stack, p.plan)
+    asset = s.asset(p.asset)
+    merged = merge(p.stack if p.stack is not None else asset.stack, p.plan)
     return PlanDraft(draft=merged.stack, export_hint=merged.export_hint)
 
 

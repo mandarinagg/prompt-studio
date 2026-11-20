@@ -749,6 +749,17 @@
         },
         "plan": {
           "$ref": "#/$defs/EditPlan"
+        },
+        "stack": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EditPlan"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [

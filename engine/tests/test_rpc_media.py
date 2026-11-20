@@ -205,6 +205,15 @@ def test_plan_draft_merges_over_current_stack(rpc):
     assert len(rpc("asset.history", asset=rpc.ids[0])["entries"]) == 2
 
 
+def test_plan_draft_over_a_given_stack(rpc):
+    # Mientras se arrastra un slider la pila todavía no está guardada: se fusiona sobre esa.
+    live = {"operations": [{"op": "exposure", "ev": 1.0}]}
+    plan = {"operations": [{"op": "exposure", "ev": 0.4}]}
+    r = rpc("plan.draft", asset=rpc.ids[0], plan=plan, stack=live)
+    assert r["draft"]["operations"] == [{"op": "exposure", "ev": pytest.approx(1.4)}]
+    assert rpc("asset.state", asset=rpc.ids[0])["stack"]["operations"] == []
+
+
 def test_plan_draft_with_resize_returns_export_hint(rpc):
     plan = {"operations": [{"op": "resize", "width": 800}, {"op": "saturation", "amount": 10}]}
     r = rpc("plan.draft", asset=rpc.ids[0], plan=plan)
