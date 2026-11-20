@@ -8,6 +8,7 @@ from pstudio import recent
 def _proj(tmp_path, name):
     p = tmp_path / f"{name}.pstudio"
     p.mkdir()
+    (p / "project.json").write_text("{}")
     return p
 
 
@@ -45,6 +46,7 @@ def test_keeps_at_most_ten(tmp_path):
 def test_missing_project_is_flagged_not_dropped(tmp_path):
     a = _proj(tmp_path, "A")
     recent.touch(a, "A")
+    (a / "project.json").unlink()
     a.rmdir()
     [item] = recent.list_recent()
     assert item.exists is False
@@ -73,3 +75,34 @@ def test_file_is_versioned_json(tmp_path):
     data = json.loads((recent.config_dir() / recent.RECENT_FILE).read_text(encoding="utf-8"))
     assert data["version"] == 1 and data["items"][0]["name"] == "A"
     assert "opened_at" in data["items"][0]
+
+
+def test_unreadable_file_is_not_overwritten(tmp_path, monkeypatch):
+    # Un bloqueo momentáneo (antivirus) no debe borrar los otros recientes al abrir uno.
+    a, b = _proj(tmp_path, "A"), _proj(tmp_path, "B")
+    recent.touch(a, "A")
+    file = recent.config_dir() / recent.RECENT_FILE
+    before = file.read_text(encoding="utf-8")
+    real = type(file).read_text
+
+    def locked(self, *args, **kwargs):
+        if self == file:
+            raise PermissionError(13, "bloqueado")
+        return real(self, *args, **kwargs)
+
+    monkeypatch.setattr(type(file), "read_text", locked)
+    with pytest.raises(PermissionError):
+        recent.touch(b, "B")
+    with pytest.raises(PermissionError):
+        recent.forget(str(a))
+    monkeypatch.undo()
+    assert file.read_text(encoding="utf-8") == before
+
+
+def test_exists_requires_project_file(tmp_path):
+    a = _proj(tmp_path, "A")
+    b = _proj(tmp_path, "B")
+    (b / "project.json").unlink()  # carpeta sin project.json
+    recent.touch(a, "A")
+    recent.touch(b, "B")
+    assert {i.name: i.exists for i in recent.list_recent()} == {"A": True, "B": False}

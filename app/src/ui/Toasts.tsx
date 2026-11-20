@@ -3,14 +3,14 @@ import type { Toast } from "../state/app";
 import { useApp } from "../state/store";
 import { Icon } from "./Icon";
 
-const INFO_MS = 6000; // los errores quedan hasta que se cierran
+const INFO_MS = 6000; // los avisos fijos (y los errores) quedan hasta que se cierran
 
 function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss(): void }) {
   useEffect(() => {
-    if (toast.kind !== "info") return;
+    if (toast.sticky) return;
     const timer = window.setTimeout(onDismiss, INFO_MS);
     return () => clearTimeout(timer);
-  }, [toast.kind]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [toast.sticky]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className={`toast toast-${toast.kind}`} role={toast.kind === "error" ? "alert" : "status"}>

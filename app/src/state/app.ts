@@ -7,6 +7,8 @@ export interface Api {
   call: typeof engineCall;
   /** Carpeta por defecto para proyectos nuevos (Documentos). */
   documentDir: () => Promise<string>;
+  /** Si el motor ya se dio por caído antes de que la UI escuchara los eventos, el motivo. */
+  engineFailure: () => Promise<string | null>;
 }
 
 export type EngineStatus = "ready" | "failed";
@@ -15,6 +17,8 @@ export interface Toast {
   id: number;
   kind: "info" | "error";
   text: string;
+  /** Queda hasta que se cierra (los errores siempre quedan). */
+  sticky: boolean;
 }
 
 export interface NewProjectDraft {
@@ -51,7 +55,7 @@ export interface AppState {
   forgetRecent(path: string): Promise<void>;
   onRestarted(): Promise<void>;
   onFailed(message: string): void;
-  notify(kind: Toast["kind"], text: string): void;
+  notify(kind: Toast["kind"], text: string, sticky?: boolean): void;
   dismissToast(id: number): void;
 }
 
@@ -103,6 +107,8 @@ export function createAppStore(api: Api): StoreApi<AppState> {
     toasts: [],
 
     async boot() {
+      const failure = await api.engineFailure().catch(() => null);
+      if (failure) get().onFailed(failure);
       const [dir] = await Promise.all([api.documentDir().catch(() => ""), get().loadRecents()]);
       set({ defaultDir: dir });
     },
@@ -116,6 +122,7 @@ export function createAppStore(api: Api): StoreApi<AppState> {
     },
 
     async openProject(path) {
+      if (get().busy) return;
       set({ busy: true });
       try {
         set({ project: await api.call("project.open", { path }) });
@@ -128,7 +135,19 @@ export function createAppStore(api: Api): StoreApi<AppState> {
     },
 
     startNewProject({ name = "Nuevo proyecto", photos = [] }) {
-      set({ draft: { name, dir: get().defaultDir, photos, error: null } });
+      if (get().busy) return;
+      const dir = get().defaultDir;
+      set({ draft: { name, dir, photos, error: null } });
+      if (!dir) {
+        // Ctrl+N antes de que boot terminara: se completa la ubicación apenas se sabe.
+        api.documentDir().then(
+          (d) => {
+            const draft = get().draft;
+            if (draft && !draft.dir) set({ defaultDir: d, draft: { ...draft, dir: d } });
+          },
+          () => {},
+        );
+      }
     },
 
     cancelNewProject() {
@@ -156,6 +175,8 @@ export function createAppStore(api: Api): StoreApi<AppState> {
     async importPhotos(paths) {
       const [first, ...rest] = paths;
       if (!first || !get().project) return;
+      const owner = !get().busy; // dentro de createProject ya está ocupado
+      if (owner) set({ busy: true });
       try {
         // Carpetas con subcarpetas incluidas: es lo que se espera al soltar una carpeta.
         const r = await api.call("project.import", { paths: [first, ...rest], recursive: true });
@@ -167,6 +188,8 @@ export function createAppStore(api: Api): StoreApi<AppState> {
         set({ project: await api.call("project.info") });
       } catch {
         // Queda la lista anterior; la próxima acción la actualiza.
+      } finally {
+        if (owner) set({ busy: false });
       }
     },
 
@@ -192,12 +215,22 @@ export function createAppStore(api: Api): StoreApi<AppState> {
       set({ engine: "ready", engineMessage: null });
       const project = get().project;
       if (!project) return;
+      set({ busy: true });
       try {
-        set({ project: await api.call("project.open", { path: project.path }) });
-        get().notify("info", "El motor se reinició y tu proyecto se volvió a abrir. No se perdió nada.");
+        const reopened = await api.call("project.open", { path: project.path });
+        if (get().project?.path !== project.path) {
+          // Se cerró mientras se reabría: el engine no debe quedar con él abierto.
+          await api.call("project.close").catch(() => null);
+          return;
+        }
+        set({ project: reopened });
+        get().notify("info", "El motor se reinició y tu proyecto se volvió a abrir. No se perdió nada.", true);
       } catch (err) {
+        if (get().project?.path !== project.path) return;
         set({ project: null });
         get().notify("error", `El motor se reinició pero no se pudo reabrir el proyecto: ${messageOf(err)}`);
+      } finally {
+        set({ busy: false });
       }
     },
 
@@ -205,9 +238,9 @@ export function createAppStore(api: Api): StoreApi<AppState> {
       set({ engine: "failed", engineMessage: sentence(message) });
     },
 
-    notify(kind, text) {
+    notify(kind, text, sticky = kind === "error") {
       const id = nextToast++;
-      set({ toasts: [...get().toasts, { id, kind, text }] });
+      set({ toasts: [...get().toasts, { id, kind, text, sticky }] });
     },
 
     dismissToast(id) {

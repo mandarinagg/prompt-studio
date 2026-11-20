@@ -4,7 +4,7 @@ import { createAppStore, type Api } from "./app";
 
 type Handler = (params: any) => unknown;
 
-function fakeApi(handlers: Partial<Record<Method, Handler>>) {
+function fakeApi(handlers: Partial<Record<Method, Handler>>, failure: string | null = null) {
   const calls: { method: Method; params: unknown }[] = [];
   const api: Api = {
     call: (async (method: Method, params?: Params<Method>) => {
@@ -14,6 +14,7 @@ function fakeApi(handlers: Partial<Record<Method, Handler>>) {
       return h(params);
     }) as Api["call"],
     documentDir: async () => "C:\\Users\\u\\Documents",
+    engineFailure: async () => failure,
   };
   return { api, calls };
 }
@@ -145,7 +146,7 @@ describe("store de la app", () => {
     await store.getState().onRestarted();
     expect(opens).toBe(2);
     expect(store.getState().engine).toBe("ready");
-    expect(store.getState().toasts.at(-1)).toMatchObject({ kind: "info" });
+    expect(store.getState().toasts.at(-1)).toMatchObject({ kind: "info", sticky: true });
   });
 
   it("si el motor se cae del todo queda el aviso", () => {
@@ -194,5 +195,59 @@ describe("store de la app", () => {
       kind: "info",
       text: "No se agregó nada: las 8 fotos ya estaban en el proyecto.",
     });
+  });
+  it("si el motor ya había fallado al arrancar, boot lo muestra", async () => {
+    const { api } = fakeApi({ "recent.list": () => ({ items: [] }) }, "no se pudo relanzar el motor: x");
+    const store = createAppStore(api);
+    await store.getState().boot();
+    expect(store.getState().engine).toBe("failed");
+    expect(store.getState().engineMessage).toBe("No se pudo relanzar el motor: x.");
+  });
+
+  it("cerrar mientras se reabre tras un reinicio deja el proyecto cerrado", async () => {
+    let release!: () => void;
+    let opens = 0;
+    const { api } = fakeApi({
+      "project.open": () => {
+        opens++;
+        if (opens === 1) return info();
+        return new Promise((r) => (release = () => r(info())));
+      },
+      "project.close": () => null,
+      "recent.list": () => ({ items: [] }),
+    });
+    const store = createAppStore(api);
+    await store.getState().openProject("C:/P/Viaje.pstudio");
+    const reopening = store.getState().onRestarted();
+    await Promise.resolve();
+    expect(store.getState().busy).toBe(true);
+    const closing = store.getState().closeProject();
+    release();
+    await Promise.all([reopening, closing]);
+    expect(store.getState().project).toBeNull();
+  });
+
+  it("mientras hay algo en curso no se abre otro proyecto ni el diálogo", async () => {
+    let release!: () => void;
+    const { api, calls } = fakeApi({
+      "project.open": () => new Promise((r) => (release = () => r(info()))),
+      "recent.list": () => ({ items: [] }),
+    });
+    const store = createAppStore(api);
+    const first = store.getState().openProject("C:/P/A.pstudio");
+    await store.getState().openProject("C:/P/B.pstudio");
+    store.getState().startNewProject({});
+    expect(store.getState().draft).toBeNull();
+    release();
+    await first;
+    expect(calls.filter((c) => c.method === "project.open")).toHaveLength(1);
+  });
+
+  it("el diálogo pide la carpeta por defecto si boot todavía no la tenía", async () => {
+    const { api } = fakeApi({});
+    const store = createAppStore(api);
+    store.getState().startNewProject({});
+    await new Promise((r) => setTimeout(r, 0));
+    expect(store.getState().draft?.dir).toBe("C:\\Users\\u\\Documents");
   });
 });

@@ -60,11 +60,15 @@ export default function App() {
     if (booted) return;
     booted = true;
     invoke("startup_metrics").catch(() => {});
-    maybeRunBench().then((bench) => {
-      if (!bench) appStore.getState().boot();
-    });
-    onEngineRestarted(() => appStore.getState().onRestarted());
-    onEngineFailed((m) => appStore.getState().onFailed(m));
+    // Primero se escucha al motor y después se arranca: boot consulta si ya había fallado.
+    Promise.all([
+      onEngineRestarted(() => appStore.getState().onRestarted()),
+      onEngineFailed((m) => appStore.getState().onFailed(m)),
+    ])
+      .then(() => maybeRunBench())
+      .then((bench) => {
+        if (!bench) appStore.getState().boot();
+      });
     getCurrentWebview().onDragDropEvent((e) => {
       const p = e.payload;
       if (p.type === "enter") setDragging(true);
@@ -78,7 +82,7 @@ export default function App() {
 
   const onKey = useCallback(
     (e: KeyboardEvent) => {
-      if (!e.ctrlKey || e.altKey || hasDraft || project) return;
+      if (!e.ctrlKey || e.altKey || hasDraft || project || appStore.getState().busy) return;
       const key = e.key.toLowerCase();
       if (key === "n") {
         e.preventDefault();
@@ -98,8 +102,10 @@ export default function App() {
 
   return (
     <TooltipProvider>
-      <EngineBanner />
-      {project ? <ProjectScreen dragging={dragging} /> : <StartScreen dragging={dragging} onOpen={chooseAndOpen} />}
+      <div className="app">
+        <EngineBanner />
+        {project ? <ProjectScreen dragging={dragging} /> : <StartScreen dragging={dragging} onOpen={chooseAndOpen} />}
+      </div>
       <NewProjectDialog />
       <Toasts />
     </TooltipProvider>

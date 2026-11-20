@@ -27,6 +27,9 @@ struct AppState {
     command: Mutex<Option<EngineCommand>>,
     restarts: Mutex<Vec<Instant>>,
     cache_dir: Mutex<Option<PathBuf>>,
+    /// Motivo por el que el motor quedó caído del todo (la UI lo consulta al arrancar, por si
+    /// el evento `engine-failed` salió antes de que escuchara).
+    failure: Mutex<Option<String>>,
     metrics: Mutex<Metrics>,
 }
 
@@ -80,6 +83,7 @@ fn restart_engine(app: &AppHandle) {
     eprintln!("[engine] terminó inesperadamente; relanzamiento: {attempt:?}");
     let failed = |message: String| {
         *state.engine.lock().unwrap() = None;
+        *state.failure.lock().unwrap() = Some(message.clone());
         let _ = app.emit("engine-failed", json!({ "message": message }));
     };
     match attempt {
@@ -115,6 +119,10 @@ async fn engine_call(
 ) -> Result<Value, EngineError> {
     let engine = engine_of(&state)?;
     let opens_project = matches!(method.as_str(), "project.open" | "project.create");
+    if opens_project || method == "project.close" {
+        // Hasta saber cuál queda abierto, `read_cache` no sirve la caché de ninguno.
+        *state.cache_dir.lock().unwrap() = None;
+    }
     let result = tauri::async_runtime::spawn_blocking(move || {
         engine.call(&method, params.unwrap_or_else(|| json!({})), CALL_TIMEOUT)
     })
@@ -167,6 +175,11 @@ async fn read_cache(
         .map_err(|e| local_error(e.to_string()))?
         .map(tauri::ipc::Response::new)
         .map_err(|e| local_error(format!("no se pudo leer la caché: {e}")))
+}
+
+#[tauri::command]
+fn engine_failure(state: tauri::State<'_, AppState>) -> Option<String> {
+    state.failure.lock().unwrap().clone()
 }
 
 /// La UI lo llama al montarse; devuelve las métricas de arranque.
@@ -231,6 +244,7 @@ pub fn run() {
             command: Mutex::new(None),
             restarts: Mutex::new(Vec::new()),
             cache_dir: Mutex::new(None),
+            failure: Mutex::new(None),
             metrics: Mutex::new(Metrics::default()),
         })
         .setup(|app| {
@@ -257,6 +271,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             engine_call,
+            engine_failure,
             startup_metrics,
             read_cache,
             bench_config,

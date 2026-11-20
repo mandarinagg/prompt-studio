@@ -131,6 +131,7 @@ def test_project_recent(tmp_path, capsys):
     assert code == 0 and "no hay proyectos recientes" in out
     a = tmp_path / "A.pstudio"
     a.mkdir()
+    (a / "project.json").write_text("{}")
     recent.touch(a, "A")
     recent.touch(tmp_path / "B.pstudio", "B")  # ya no existe
     code, out, _ = run(["recent"], capsys)

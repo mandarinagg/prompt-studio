@@ -24,7 +24,6 @@ export function NewProjectDialog() {
     if (!draft) return;
     setName(draft.name);
     setDir(draft.dir);
-    requestAnimationFrame(() => nameRef.current?.select());
   }, [draft?.name, draft?.dir, draft?.photos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!draft) return null;
@@ -45,6 +44,7 @@ export function NewProjectDialog() {
       open
       onOpenChange={(o) => !o && !busy && cancel()}
       title="Nuevo proyecto"
+      initialFocus={nameRef}
       description={
         photos > 0
           ? `Se va a crear con ${photos === 1 ? "lo que soltaste" : `los ${photos} elementos que soltaste`}. Las fotos quedan donde están: el proyecto solo guarda dónde encontrarlas y tus ajustes.`
