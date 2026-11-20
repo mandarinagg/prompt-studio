@@ -5,6 +5,8 @@ import { IconButton } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Tooltip } from "../ui/Tooltip";
 import { AdjustPanel } from "./AdjustPanel";
+import { PlanPanel } from "./PlanPanel";
+import { focusPrompt, PromptBox } from "./PromptBox";
 import { Viewer } from "./Viewer";
 
 const HOLD_MS = 250;
@@ -65,14 +67,18 @@ export function EditorScreen() {
       }
       const key = e.key.toLowerCase();
       if (e.ctrlKey && !e.altKey) {
-        if (key === "z" && !e.shiftKey) s.undo();
+        if (key === "k") focusPrompt();
+        else if (key === "z" && !e.shiftKey) s.undo();
         else if ((key === "z" && e.shiftKey) || key === "y") s.redo();
         else return;
         e.preventDefault();
         return;
       }
       if (e.ctrlKey || e.altKey || e.metaKey) return;
-      if (key === "z") {
+      if (e.key === "/") {
+        e.preventDefault(); // que la barra no quede escrita en el pedido
+        focusPrompt();
+      } else if (key === "z") {
         s.setZoom(s.zoom === "fit" ? "actual" : "fit");
       } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
         if ((e.target as HTMLElement)?.closest?.("[role=slider], .crop-frame")) return;
@@ -169,7 +175,9 @@ export function EditorScreen() {
       </header>
       <div className="editor-body">
         <Viewer holdBefore={holdBefore} split={split} />
-        <aside className="panel" aria-label="Ajustes de la foto">
+        <aside className="panel" aria-label="Pedido y ajustes de la foto">
+          <PromptBox key={asset.id} />
+          <PlanPanel />
           <AdjustPanel />
         </aside>
       </div>
