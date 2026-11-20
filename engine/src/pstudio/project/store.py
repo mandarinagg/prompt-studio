@@ -95,6 +95,11 @@ def save(path: Path, project: Project) -> None:
         raise
 
 
+def _inside_project(file: Path) -> bool:
+    # La caché de un proyecto (miniaturas, previews) no son fotos del usuario.
+    return any(d.name.lower().endswith(PROJECT_SUFFIX) for d in file.parents)
+
+
 def _expand(paths: list[Path], recursive: bool) -> list[Path]:
     files: list[Path] = []
     for p in paths:
@@ -104,7 +109,7 @@ def _expand(paths: list[Path], recursive: bool) -> list[Path]:
             files.extend(sorted((f for f in found if f.is_file()), key=lambda f: str(f).lower()))
         else:
             files.append(p)
-    return files
+    return [f for f in files if not _inside_project(f)]
 
 
 def add_assets(project: Project, paths: list[Path], *, recursive: bool = False) -> AddResult:

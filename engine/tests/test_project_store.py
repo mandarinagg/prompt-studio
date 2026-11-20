@@ -114,6 +114,32 @@ def test_add_folder_recursive_in_order(tmp_path):
     assert [Path(p.asset(i).path).name for i in deep.added] == ["c.webp"]
 
 
+def test_add_recursive_skips_project_folders(tmp_path):
+    # Un proyecto guardado junto a las fotos: su caché (miniaturas .jpg) no son fotos del usuario.
+    folder = tmp_path / "fotos"
+    photo(folder / "a.jpg", 1)
+    inner = create(folder, "Viaje")
+    photo(inner / "cache" / "thumbs" / "x.jpg", 2)
+    p = open_project(inner)
+    added = add_assets(p, [folder], recursive=True)
+    assert [Path(p.asset(i).path).name for i in added.added] == ["a.jpg"]
+    assert added.unsupported == []
+
+
+def test_add_never_imports_from_inside_a_project(tmp_path):
+    folder = tmp_path / "fotos"
+    photo(folder / "a.jpg", 1)
+    inner = create(folder, "Viaje")
+    photo(inner / "cache" / "thumbs" / "x.jpg", 2)
+    upper = folder / "Otro.PSTUDIO" / "cache"
+    photo(upper / "y.jpg", 3)
+    p = open_project(inner)
+    deep = add_assets(p, [folder], recursive=True)
+    assert [Path(p.asset(i).path).name for i in deep.added] == ["a.jpg"]
+    direct = add_assets(p, [inner / "cache" / "thumbs", inner / "cache" / "thumbs" / "x.jpg"])
+    assert direct.added == [] and direct.unsupported == []
+
+
 def test_add_does_not_touch_originals(tmp_path):
     a = photo(tmp_path / "in" / "a.jpg")
     before = sha256_file(a)

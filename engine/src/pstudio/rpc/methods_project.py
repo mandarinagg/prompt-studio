@@ -12,6 +12,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from pstudio import recent
 from pstudio.project import history
 from pstudio.project.stack import merge
 from pstudio.project.store import add_assets, create, relink
@@ -167,6 +168,35 @@ def project_create(s: Session, p: CreateParams) -> ProjectInfo:
 def project_open(s: Session, p: OpenParams) -> ProjectInfo:
     s.open(Path(p.path))
     return _info(s)
+
+
+@method("project.close")
+def project_close(s: Session) -> None:
+    s.close_project()
+
+
+class RecentList(BaseModel):
+    items: list[recent.RecentProject]
+
+
+class ForgetParams(Params):
+    path: str
+
+
+@method("recent.list")
+def recent_list(s: Session) -> RecentList:
+    return RecentList(items=recent.list_recent())
+
+
+@method("recent.forget")
+def recent_forget(s: Session, p: ForgetParams) -> RecentList:
+    try:
+        recent.forget(p.path)
+    except OSError as e:
+        raise RpcError(
+            ENGINE_ERROR, f"no se pudo actualizar la lista de recientes: {e.strerror}"
+        ) from e
+    return RecentList(items=recent.list_recent())
 
 
 @method("project.info")
