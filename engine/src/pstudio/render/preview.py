@@ -54,18 +54,11 @@ class Proxy:
 
 
 def make_proxy(path: str | Path, long_side: int = PROXY_SIZE) -> tuple[Proxy, SourceInfo]:
-    """Decodifica el original (solo lectura) y lo reduce a `long_side` px de lado largo."""
-    img, info = decode(path)
-    longest = max(img.width, img.height)
-    factor = min(1.0, long_side / longest)
-    if factor < 1:
-        if img.hasalpha():
-            img = img.premultiply(max_alpha=1.0).resize(factor).unpremultiply(max_alpha=1.0)
-        else:
-            img = img.resize(factor)
-        img = img.copy(interpretation="scrgb").cast("float")
+    """Decodifica el original (solo lectura) ya reducido a `long_side` px de lado largo
+    (`decode(reduce_to=…)`: sin decodificar entera una foto grande, #42)."""
+    img, info = decode(path, reduce_to=long_side)
     img = img.copy_memory()
-    return Proxy(img, info.sha256, max(img.width, img.height) / longest), info
+    return Proxy(img, info.sha256, max(img.width, img.height) / max(info.width, info.height)), info
 
 
 def image_bytes(img: pyvips.Image | None) -> int:

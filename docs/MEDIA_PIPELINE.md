@@ -56,9 +56,16 @@ Implementado en `engine/src/pstudio/render/io.py` (#10).
 Implementado en `engine/src/pstudio/render/preview.py` (API de librería; la app la usa por RPC
 desde M3).
 
-- **Proxy:** `make_proxy(ruta)` decodifica el original (solo lectura, con `revalidate`), lo
-  reduce a 2048 px de lado largo (lanczos3, alpha premultiplicado) y lo deja en memoria junto
-  con el SHA-256 del original y `scale` (px del proxy por px del original).
+- **Proxy:** `make_proxy(ruta, lado)` decodifica el original (solo lectura, con `revalidate`)
+  ya reducido a `lado` px de lado largo (2048 por defecto; la app usa 1024 al arrastrar) y lo
+  deja en memoria junto con el SHA-256 del original y `scale` (px del proxy por px del
+  original). Desde #42 usa `decode(reduce_to=lado)`: un JPEG se decodifica ya reducido por
+  libjpeg (×2/×4/×8, *shrink-on-load*) mientras queden ≥ 2·lado px, el resto lo hace lanczos3
+  en lineal (alpha premultiplicado) y la orientación EXIF se aplica sobre la imagen chica. Esa
+  primera reducción promedia en gamma (YCbCr), no en lineal: en las 8 fotos de prueba el proxy
+  difiere del de la foto entera en 0.04–1.4 niveles de 8 bits de media (p99.9 ≤ 27; el peor
+  caso es la textura fina contra el cielo de backlit-tree). A 2048 px las fotos de ≤ 32 MP no
+  se reducen al decodificar y el proxy es el mismo de antes.
 - **Etapas:** el plan se recorre en las mismas etapas que `apply_plan` (`plan_stages` en
   `ops/__init__.py`): un grupo de curvas tonales consecutivas fundidas en una LUT, una op
   automática o cualquier otra op sola; las ops neutras no cuentan. `apply_plan` y la preview
@@ -94,23 +101,99 @@ contrast, highlights, shadows, saturation, vibrance, denoise, sharpen, vignette 
 En frío la caché es *más rápida* que `apply_plan`: materializar cada etapa evita que los
 desenfoques de sharpen recalculen por tiles toda la cadena anterior (denoise incluido).
 
-**Criterio "< 30 ms al cambiar la última op": se cumple solo si esa op es barata.** El costo
-es el de la etapa que se recalcula más 1–4 ms de la caché (claves, desalojo). Con cada op al
-final de la cadena de 10 (límite 512 MiB):
+**Criterio "< 30 ms al cambiar la última op"** (medición de M1, antes de #42): se cumplía
+solo si esa op era barata (exposure/white_balance/saturation 12–16 ms; vignette 40–45;
+vibrance 51–64; sharpen 54–57; curva tonal 70–80; denoise 150–157). El costo es el de la etapa
+que se recalcula más 1–4 ms de la caché, así que #42 abarató las ops mismas.
 
-| última op | ms |
-|---|---|
-| exposure / white_balance / saturation | 12–16 ✅ |
-| vignette | 40–45 ❌ |
-| vibrance | 51–64 ❌ |
-| sharpen | 54–57 ❌ |
-| una curva tonal (contrast) | 70–80 ❌ |
-| denoise | 150–157 ❌ |
+### Preview rápida (#42)
+Bench reproducible: `cd engine && uv run python scripts/bench_preview.py` (usa
+`tests/fixtures/photos`). Cadena de 10 de la app: exposure, contrast, highlights, shadows,
+whites, blacks, white_balance, saturation, vibrance, vignette (las 5 curvas son una etapa).
+Cada op se mide como **última** de la cadena (las extra van en lugar de exposure), con el
+prefijo en caché y un valor distinto por cuadro; mediana de 7 cuadros. Foto backlit-tree
+(8257×5504, 45 MP), Ryzen 5 3600, libvips 8.18.7, 12 hilos, 2026-11-20, con el equipo en uso
+(los números varían ±10–20% entre corridas).
 
-Para bajar de 30 ms en esas ops hay que abaratar las ops mismas (p. ej. la máscara radial de
-vignette o la cantidad de pasadas de las curvas), no la caché. Mientras denoise no sea la op
-que cambia y esté antes de ella, no se recalcula: su costo (≈ 165 ms por etapa en el proxy)
-solo se paga al moverla a ella o a algo anterior.
+| op como última | antes 1024 px | antes 2048 px | ahora 1024 px | ahora 2048 px |
+|---|---:|---:|---:|---:|
+| exposure | 3.9 | 10.7 | 5.1 | 10.1 |
+| contrast | 29.0 | 50.6 | 13.9 | 21.4 |
+| highlights | 32.4 | 54.2 | 12.1 | 19.8 |
+| shadows | 31.7 | 55.9 | 15.2 | 22.9 |
+| whites | 27.2 | 59.1 | 12.4 | 20.5 |
+| blacks (la mitad de los cuadros levanta el negro) | 30.6 | 51.9 | 19.2 | 33.1 |
+| white_balance | 5.3 | 13.6 | 7.1 | 11.5 |
+| saturation | 5.3 | 13.2 | 6.9 | 11.4 |
+| vibrance | 29.4 | 55.4 | 21.7 | 28.7 |
+| vignette | 21.2 | 39.7 | 8.0 | 13.1 |
+| sharpen (radio 1.5: a 1024 px queda < 0.3 px y no hace nada) | 0.2 | 54.6 | 0.2 | 53.3 |
+| denoise | 57.6 | 105.1 | 48.7 | 99.3 |
+| auto_exposure | 41.2 | 47.5 | 3.9 | 10.1 |
+| auto_white_balance | — ¹ | — ¹ | 4.2 | 11.5 |
+| **cambia la 1.ª op: toda la cadena** | **96.5** | **196.4** | **52.3** | **141.4** |
+
+¹ La primera versión del bench repetía el valor de la op y medía un acierto de la caché.
+
+`make_proxy` en frío (decode + reducción + SHA-256 del original), mediana de 3, ms:
+
+| foto | MP | antes 1024 | antes 2048 | ahora 1024 | ahora 2048 |
+|---|---:|---:|---:|---:|---:|
+| backlit-tree | 45 | 789 | 1274 | 488 | 576 |
+| candle-lowlight | 24 | 330 | 461 | 197 | 352 |
+| daylight-landscape | 49 | 900 | 3331 | 527 | 779 |
+| product-white | 58 | 1650 | 2346 | 180 | 286 |
+| stage-portrait | 32 | 285 | 322 | 194 | 373 |
+| starry-night-noise | 24 | 422 | 563 | 324 | 477 |
+| warm-living-room | 20 | 204 | 264 | 120 | 261 |
+| warm-restaurant | 20 | 168 | 237 | 116 | 257 |
+
+A 2048 px las fotos de 20–32 MP no se reducen al decodificar, así que la diferencia con
+"antes" en esas filas es ruido de la medición. Se probó también abrir en modo secuencial de
+libvips: fue 1.3–2.2× más lento y se descartó.
+
+Qué cambió:
+- **Curvas tonales** (`ops/_tone.py`): la LUT guarda la razón Y'/Y y se indexa con **los bits
+  del float32 de Y** (exponente + 10 bits de mantisa → 1024 puntos por octava, de 2^-32 a
+  2^31; los 13 bits bajos interpolan). Por píxel ya no hay potencias ni `ifthenelse`:
+  luminancia, desplazamiento de bits, dos `maplut` y una multiplicación. Cambios de resultado,
+  todos dentro de las golden (no se regeneró ninguna ni se tocó su tolerancia): por encima de
+  Y ≈ 4.6 la curva se evalúa de verdad (antes se extendía con la ganancia del último punto);
+  un píxel con Y ≤ 0 (fuera de gama) recibe el cambio del negro puro (antes también se le
+  sumaba −Y); y si la curva no levanta el negro, donde Y ≤ 1e-6 se usa Y'/Y sin pasar de 1 en
+  vez de sumar gris (la diferencia es < Y'(1e-6): sigue siendo negro). Solo blacks > 0
+  necesita la segunda banda (gris sumado), que cuesta ~10 ms más a 2048 px.
+- **vibrance:** k = 1 + s·(mín/máx)^(1/2.2) sale de una LUT con el mismo índice por bits, sin
+  potencia ni `ifthenelse`.
+- **vignette:** la máscara radial se calcula una vez por (ancho, alto, midpoint) y se guarda en
+  memoria (≤ 4, solo en tamaños de preview); al mover amount solo cambia `exp(k·f)`. Mismos
+  bytes que antes.
+- **Ops automáticas:** la medición de la copia de análisis queda guardada en el estado del
+  prefijo; mover su strength no vuelve a medir (antes ~35 ms por cuadro).
+- **denoise:** en tamaños de preview materializa los desenfoques del filtro guiado (mismos
+  bytes, 58 → 49 ms a 1024 px); a resolución completa no, por memoria.
+- **Proxy:** shrink-on-load (ver arriba). El export no cambió de tiempo: 3.2 s ahora contra
+  3.4 s antes con la cadena de M1 sobre candle-lowlight (24 MP), en este mismo equipo.
+- La preview sigue dando **los mismos bytes** que `apply_plan` sobre el proxy.
+
+**Lo que no llega a 30 ms a 2048 px, medido:**
+- **denoise (≈ 100 ms) y sharpen (≈ 53 ms):** son desenfoques sobre la luminancia más
+  potencias por píxel. Cada pasada de una banda a 2048 px cuesta 7–15 ms en este equipo, aun
+  en memoria (materializar 33 MB nuevos incluye los fallos de página de Windows), y el filtro
+  guiado necesita al menos cuatro. No se probó un filtro distinto: cambiaría el resultado del
+  export.
+- **blacks levantando el negro (≈ 33 ms)** y **la cadena entera a 2048 px (≈ 140 ms).**
+
+**Qué tiene que hacer la UI (#58):**
+- Mientras se arrastra, pedir la preview a **1024 px**: la cadena entera tarda ≈ 52 ms y cada
+  op suelta ≤ 22 ms, salvo denoise (≈ 49 ms). Al soltar, refinar a 2048 (o al tamaño del
+  visor).
+- **Render progresivo para denoise y sharpen:** al mover su slider, o algo anterior a ellos,
+  mostrar primero la preview del plan **sin** esas ops (su prefijo suele estar en caché) y
+  después la completa. El engine no necesita nada nuevo: es un `preview.render` con la pila
+  sin esas ops, seguido del pedido normal; "gana el último" descarta lo viejo.
+- Al abrir una foto, pedir primero 1024 px: 116–527 ms en las fotos de prueba (las de 45–49 MP
+  quedan justo en el límite de 500 ms). Mientras tanto se puede mostrar la miniatura.
 
 ## Video (M4)
 Proxies (720p H.264 all-intra para scrubbing) → timeline OTIO → filtergraph FFmpeg → encode

@@ -19,6 +19,7 @@ proxy) se achican igual, así el proxy muestra lo que va a salir en el export a 
 
 from __future__ import annotations
 
+import functools
 import math
 
 import pyvips
@@ -31,6 +32,7 @@ DENOISE_RADIUS = 3.0  # px (imagen original) del filtro guiado
 DENOISE_NOISE = 0.05  # desvío de ruido (en p) que strength = 1 considera alisable
 CHROMA_SIGMA = 3.0  # px (imagen original) del difuminado de color con strength = 1
 VIGNETTE_EV = 2.0
+MAX_CACHED_MASK = 2048 * 2048  # px: hasta acá (tamaños de preview) se guardan intermedios
 MIN_SIGMA = 0.3  # por debajo, el desenfoque no cambia nada visible a esa escala
 
 
@@ -65,15 +67,24 @@ def sharpen(img: pyvips.Image, op: Sharpen, scale: float = 1.0) -> pyvips.Image:
 
 # ------------------------------------------------------------------ denoise
 def _guided(p: pyvips.Image, sigma: float, eps: float) -> pyvips.Image:
-    # Los desenfoques se hacen de a dos bandas (p y p², luego a y b): una pasada cada uno.
-    moments = _blur(p.bandjoin(p * p), sigma)
+    """Los desenfoques se hacen de a dos bandas (p y p², luego a y b): una pasada cada uno.
+
+    En tamaños de preview cada desenfoque se materializa (`_small_in_memory`): mean, var y a se
+    leen varias veces y libvips recalcula lo anterior en cada lectura. Da los mismos bytes y
+    baja 58 → 49 ms a 1024 px (#42). A resolución completa (export) no: cada copia pesaría
+    100–200 MB."""
+    moments = _small_in_memory(_blur(p.bandjoin(p * p), sigma))
     mean, mean_sq = moments[0], moments[1]
     var = mean_sq - mean * mean
     var = (var > 0).ifthenelse(var, 0.0)
     a = var / (var + eps)
     b = mean - a * mean
-    coeffs = _blur(a.bandjoin(b), sigma)
-    return coeffs[0] * p + coeffs[1]
+    coeffs = _small_in_memory(_blur(a.bandjoin(b), sigma))
+    return _small_in_memory(coeffs[0] * p + coeffs[1])
+
+
+def _small_in_memory(img: pyvips.Image) -> pyvips.Image:
+    return img.copy_memory() if img.width * img.height <= MAX_CACHED_MASK else img
 
 
 def denoise(img: pyvips.Image, op: Denoise, scale: float = 1.0) -> pyvips.Image:
@@ -83,7 +94,7 @@ def denoise(img: pyvips.Image, op: Denoise, scale: float = 1.0) -> pyvips.Image:
     rgb, alpha = split_alpha(img)
     c_sigma = CHROMA_SIGMA * op.strength * scale
     if c_sigma >= MIN_SIGMA:
-        lab = rgb.copy(interpretation="scrgb").colourspace("lab")
+        lab = _small_in_memory(rgb.copy(interpretation="scrgb").colourspace("lab"))
         ab = lab.extract_band(1, n=2)
         ab = ab + (_blur(ab, c_sigma) - ab) * op.strength
         rgb = lab.extract_band(0).bandjoin(ab).copy(interpretation="lab").colourspace("scrgb")
@@ -91,22 +102,38 @@ def denoise(img: pyvips.Image, op: Denoise, scale: float = 1.0) -> pyvips.Image:
     # filtro guiado anida desenfoques; sin esto libvips recalcula decode + Lab por tile
     rgb = rgb.copy_memory()
     y = luminance(rgb)
-    p = _perceptual(y)
+    p = _small_in_memory(_perceptual(y))
     eps = (DENOISE_NOISE * op.strength) ** 2
     return join_alpha(_with_luminance(rgb, y, _guided(p, sigma, eps)), alpha)
 
 
 # ------------------------------------------------------------------ vignette
-def vignette_gain(width: int, height: int, op: Vignette) -> pyvips.Image:
-    """Ganancia por píxel (1 banda float)."""
+def _falloff(width: int, height: int, midpoint: int) -> pyvips.Image:
+    """f(r): 0 en el centro, 1 desde el borde de la caída (1 banda float, perezosa)."""
     xyz = pyvips.Image.xyz(width, height).cast("float")
     x = (xyz[0] + 0.5 - width / 2) / (width / 2)
     y = (xyz[1] + 0.5 - height / 2) / (height / 2)
     r = (x * x + y * y) ** 0.5 / math.sqrt(2)
-    start = 0.9 * op.midpoint / 100
+    start = 0.9 * midpoint / 100
     t = (r - start) / (1 - start)
     t = (t < 0).ifthenelse(0.0, (t > 1).ifthenelse(1.0, t))
-    f = t * t * (3 - t * 2)
+    return t * t * (3 - t * 2)
+
+
+@functools.lru_cache(maxsize=4)
+def vignette_falloff(width: int, height: int, midpoint: int) -> pyvips.Image:
+    """`_falloff` en memoria. Mientras se mueve el slider de amount en la preview solo cambia
+    la ganancia, así que la máscara se reutiliza (#42); son ≤ 11 MB por proxy de 2048 px."""
+    return _falloff(width, height, midpoint).copy_memory()
+
+
+def vignette_gain(width: int, height: int, op: Vignette, cache: bool = True) -> pyvips.Image:
+    """Ganancia por píxel (1 banda float). La máscara se cachea solo en tamaños de preview:
+    a resolución completa (export) pesaría ~100 MB y se calcula perezosa, como siempre."""
+    if cache and width * height <= MAX_CACHED_MASK:
+        f = vignette_falloff(width, height, op.midpoint)
+    else:
+        f = _falloff(width, height, op.midpoint)
     return (f * (VIGNETTE_EV * op.amount / 100 * math.log(2))).exp()
 
 
