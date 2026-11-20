@@ -5,10 +5,11 @@ import { useCallback, useEffect, useState } from "react";
 import { maybeRunBench } from "./dev/bench";
 import { onEngineFailed, onEngineRestarted } from "./engine/client";
 import { classifyDrop, isProjectPath, projectFolder } from "./lib/paths";
+import { EditorScreen } from "./editor/EditorScreen";
 import { NewProjectDialog } from "./screens/NewProjectDialog";
 import { ProjectScreen } from "./screens/ProjectScreen";
 import { StartScreen } from "./screens/StartScreen";
-import { appStore, useApp } from "./state/store";
+import { appStore, editorStore, useApp, useEditor } from "./state/store";
 import { Icon } from "./ui/Icon";
 import { Toasts } from "./ui/Toasts";
 import { TooltipProvider } from "./ui/Tooltip";
@@ -53,6 +54,7 @@ function EngineBanner() {
 
 export default function App() {
   const project = useApp((s) => s.project);
+  const editing = useEditor((s) => s.asset !== null);
   const hasDraft = useApp((s) => s.draft !== null);
   const [dragging, setDragging] = useState(false);
 
@@ -62,7 +64,12 @@ export default function App() {
     invoke("startup_metrics").catch(() => {});
     // Primero se escucha al motor y después se arranca: boot consulta si ya había fallado.
     Promise.all([
-      onEngineRestarted(() => appStore.getState().onRestarted()),
+      onEngineRestarted(async () => {
+        await appStore.getState().onRestarted();
+        // El proyecto se reabrió: el editor vuelve a pedir la pila y la preview.
+        if (appStore.getState().project) await editorStore.getState().reload();
+        else editorStore.getState().close();
+      }),
       onEngineFailed((m) => appStore.getState().onFailed(m)),
     ])
       .then(() => maybeRunBench())
@@ -104,7 +111,13 @@ export default function App() {
     <TooltipProvider>
       <div className="app">
         <EngineBanner />
-        {project ? <ProjectScreen dragging={dragging} /> : <StartScreen dragging={dragging} onOpen={chooseAndOpen} />}
+        {project && editing ? (
+          <EditorScreen />
+        ) : project ? (
+          <ProjectScreen dragging={dragging} />
+        ) : (
+          <StartScreen dragging={dragging} onOpen={chooseAndOpen} />
+        )}
       </div>
       <NewProjectDialog />
       <Toasts />

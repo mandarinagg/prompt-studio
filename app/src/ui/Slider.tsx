@@ -1,5 +1,5 @@
 import * as RS from "@radix-ui/react-slider";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { parseNumber, snap } from "../lib/numbers";
 
 interface SliderProps {
@@ -27,6 +27,7 @@ export function Slider({ label, value, min, max, step, resetValue, format, onCha
   const show = format ?? ((v: number) => String(v));
   const [text, setText] = useState(show(value));
   const [editing, setEditing] = useState(false);
+  const cancelled = useRef(false);
 
   useEffect(() => {
     if (!editing) setText(show(value));
@@ -34,6 +35,12 @@ export function Slider({ label, value, min, max, step, resetValue, format, onCha
 
   const commitText = () => {
     setEditing(false);
+    if (cancelled.current) {
+      // Esc: se descarta lo escrito (onBlur corre con el texto viejo, por eso el ref).
+      cancelled.current = false;
+      setText(show(value));
+      return;
+    }
     const parsed = parseNumber(text.replace(/[^\d.,+-]/g, ""), min, max);
     if (parsed === null) {
       setText(show(value));
@@ -66,8 +73,8 @@ export function Slider({ label, value, min, max, step, resetValue, format, onCha
           onKeyDown={(e) => {
             if (e.key === "Enter") e.currentTarget.blur();
             if (e.key === "Escape") {
-              setText(show(value));
-              setEditing(false);
+              e.stopPropagation();
+              cancelled.current = true;
               e.currentTarget.blur();
             }
           }}

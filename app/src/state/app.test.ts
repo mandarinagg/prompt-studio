@@ -250,4 +250,13 @@ describe("store de la app", () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(store.getState().draft?.dir).toBe("C:\\Users\\u\\Documents");
   });
+
+  it("refreshProject actualiza las fotos (p. ej. la marca de editada)", async () => {
+    const edited = info({ assets: [{ id: "a1", file: "f.jpg", edited: true, missing: false }] });
+    const { api } = fakeApi({ "project.open": () => info(), "recent.list": () => ({ items: [] }), "project.info": () => edited });
+    const store = createAppStore(api);
+    await store.getState().openProject("C:\P\Viaje.pstudio");
+    await store.getState().refreshProject();
+    expect(store.getState().project?.assets[0].edited).toBe(true);
+  });
 });
