@@ -34,7 +34,18 @@ import numpy as np
 import pyvips
 
 from pstudio.analysis import ImageStats, analyze
-from pstudio.ops._tone import EPS, GAMMA, LUMA, join_alpha, luminance, split_alpha
+from pstudio.ops._tone import (
+    EPS,
+    GAMMA,
+    GRID_MID,
+    LUMA,
+    TOP,
+    join_alpha,
+    log_bits,
+    luminance,
+    lut_image,
+    split_alpha,
+)
 from pstudio.schema.plan import AutoExposure, AutoWhiteBalance, Saturation, Vibrance, WhiteBalance
 
 TEMP_EV = 0.6  # diferencia L/S en conos (EV) con ±100: ≈ 1 EV entre rojo y azul en RGB
@@ -114,22 +125,28 @@ def saturation(img: pyvips.Image, op: Saturation) -> pyvips.Image:
     return img if op.is_noop() else _apply_matrix(img, saturation_matrix(op))
 
 
+def vibrance_lut(op: Vibrance) -> pyvips.Image:
+    """k en función de r = mín/máx, indexada por los bits de r (_tone.log_bits).
+
+    c = (h^(1/γ) − l^(1/γ)) / h^(1/γ) = 1 − r^(1/γ), así que k = 1 + s·r^(1/γ). r < 0 (algún
+    canal negativo: fuera de gama) cuenta como c = 1, y r > 1 (todos negativos) como c = 0.
+    """
+    k = 1 + op.amount / 100 * np.minimum(GRID_MID, 1.0) ** (1 / GAMMA)
+    k[0] = k[TOP] = 1.0
+    return lut_image([k])
+
+
 def vibrance(img: pyvips.Image, op: Vibrance) -> pyvips.Image:
     if op.is_noop():
         return img
     rgb, alpha = split_alpha(img)
     y = luminance(rgb)
-    # c en escala perceptual: (h^(1/γ) − l^(1/γ)) / h^(1/γ) = 1 − (l/h)^(1/γ): una sola potencia
-    hi, lo = _rank(rgb, 2), _rank(rgb, 0)
-    lit = hi > EPS
-    ratio = lit.ifthenelse(lo / lit.ifthenelse(hi, 1.0), 1.0)
-    c = 1 - (ratio > 0).ifthenelse(ratio, 0.0) ** (1 / GAMMA)
-    k = (1 - c) * (op.amount / 100) + 1
-    return join_alpha(y + (rgb - y) * k, alpha)
-
-
-def _rank(rgb: pyvips.Image, index: int) -> pyvips.Image:
-    return rgb[0].bandrank([rgb[1], rgb[2]], index=index)
+    r, g, b = rgb[0], rgb[1], rgb[2]
+    hi, lo = r.bandrank([g, b], index=2), r.bandrank([g, b], index=0)
+    idx, _ = log_bits(lo / hi)  # sin luz (máx = 0) libvips da 0: k = 1, no hay color
+    k = idx.maplut(vibrance_lut(op))
+    # = Y + (RGB − Y)·k, con la imagen de 3 bandas leída una sola vez
+    return join_alpha(rgb * k + y * (1 - k), alpha)
 
 
 def auto_exposure_ev(img: pyvips.Image, op: AutoExposure, stats: ImageStats | None = None) -> float:

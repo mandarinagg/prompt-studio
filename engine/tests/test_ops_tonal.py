@@ -170,6 +170,28 @@ def test_out_of_gamut_values_stay_finite():
         assert np.all(np.isfinite(apply_op(img, op(name, value)).numpy())), name
 
 
+def test_curve_follows_exactly_far_above_diffuse_white():
+    # La LUT cubre Y hasta 2^24: muy por encima del blanco (+5 EV de exposición, HDR) la curva
+    # se evalúa de verdad, no se extiende con la ganancia del último punto.
+    from pstudio.ops.tonal import whites_curve
+
+    y = np.array([2.0, 10.0, 30.0])
+    out = luma(apply_op(scrgb(np.dstack([y, y, y]).reshape(1, 3, 3)), op("whites", 100)))[0]
+    p = y ** (1 / 2.2)
+    want = whites_curve(op("whites", 100))(p) ** 2.2
+    np.testing.assert_allclose(out, want, rtol=1e-3)
+
+
+@pytest.mark.parametrize("name", TONAL[1:])
+def test_negative_luminance_is_treated_as_black(name):
+    # scRGB admite luminancia negativa (gamas amplias, rebote del lanczos). Para la curva vale
+    # como negro: el píxel recibe el mismo desplazamiento neutro que el negro puro.
+    arr = np.array([[[-0.08, -0.06, -0.04], [0.0, 0.0, 0.0]]])
+    out = apply_op(scrgb(arr), op(name, 100)).numpy()
+    lift = out[0, 1] - arr[0, 1]
+    np.testing.assert_allclose(out[0, 0] - arr[0, 0], lift, atol=1e-6)
+
+
 # ------------------------------------------------------------------ plan
 def test_apply_plan_in_order_and_unimplemented_ops_fail_loudly():
     plan = EditPlan.model_validate(
@@ -212,3 +234,13 @@ def test_fused_plan_matches_sequential_ops():
         sequential = apply_op(sequential, o)
     fused = apply_plan(img, plan).numpy()
     np.testing.assert_allclose(fused, sequential.numpy(), atol=2e-4, rtol=1e-3)
+
+
+@pytest.mark.parametrize(("name", "value"), [("contrast", -100), ("shadows", 100)])
+def test_near_black_out_of_gamut_pixels_are_not_amplified(name, value):
+    # Y ≈ 1e-7 con canales grandes (fuera de gama): la razón Y'/Y se dispararía.
+    r, b = 0.5, 0.0
+    g = (1e-7 - LUMA[0] * r - LUMA[2] * b) / LUMA[1]
+    arr = np.array([[[r, g, b]]])
+    out = apply_op(scrgb(arr), op(name, value)).numpy()
+    assert np.all(np.abs(out - arr) < 1e-3)

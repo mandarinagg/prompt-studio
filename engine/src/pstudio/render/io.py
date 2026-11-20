@@ -92,8 +92,22 @@ def _is_srgb(description: str) -> bool:
     return "srgb" in description.lower().replace(" ", "")
 
 
-def decode(path: str | Path) -> tuple[pyvips.Image, SourceInfo]:
-    """Abre un original (solo lectura) y lo lleva a scRGB float32 lineal, ya orientado."""
+def jpeg_shrink(longest: int, reduce_to: int) -> int:
+    """Mayor reducción de libjpeg al decodificar (×2/×4/×8) que deja ≥ 2·reduce_to px de lado
+    largo. Con ese margen, la reducción final (lanczos3 en lineal) sigue haciendo casi todo el
+    trabajo y la preview queda casi igual que reducir la foto entera (#42)."""
+    return next((s for s in (8, 4, 2) if longest / s >= 2 * reduce_to), 1)
+
+
+def decode(path: str | Path, reduce_to: int | None = None) -> tuple[pyvips.Image, SourceInfo]:
+    """Abre un original (solo lectura) y lo lleva a scRGB float32 lineal, ya orientado.
+
+    Con `reduce_to` devuelve la foto reducida a ese lado largo (proxy de preview, nunca la
+    agranda), sin decodificarla entera: un JPEG se lee ya reducido por libjpeg (`jpeg_shrink`)
+    y en modo secuencial (sin guardar la foto decodificada; con > 100 MB libvips la pasaba a
+    un temporal en disco), y la orientación EXIF se aplica sobre la imagen chica. `SourceInfo`
+    describe siempre el original entero.
+    """
     path = Path(path).resolve()
     if path.suffix.lower() not in SUFFIXES:
         raise ValueError(f"formato no soportado: {path.suffix or '(sin extensión)'}")
@@ -106,7 +120,17 @@ def decode(path: str | Path) -> tuple[pyvips.Image, SourceInfo]:
     if fmt is None:
         raise ValueError(f"{path.name}: el contenido no es JPEG/PNG/WebP/TIFF ({loader})")
     orientation = img.get("orientation") if img.get_typeof("orientation") else 1
-    img = img.autorot()
+    width, height = (
+        (img.height, img.width) if orientation in (5, 6, 7, 8) else (img.width, img.height)
+    )
+    longest = max(width, height)
+    if reduce_to is not None:
+        options: dict = {"access": "sequential"}
+        if fmt == "jpeg" and (shrink := jpeg_shrink(longest, reduce_to)) > 1:
+            options["shrink"] = shrink
+        img = pyvips.Image.new_from_file(str(path), revalidate=True, **options)
+    else:
+        img = img.autorot()
 
     bit_depth = {"uchar": 8, "char": 8, "ushort": 16, "short": 16}.get(img.format, 32)
     icc = img.get("icc-profile-data") if img.get_typeof("icc-profile-data") else b""
@@ -121,19 +145,34 @@ def decode(path: str | Path) -> tuple[pyvips.Image, SourceInfo]:
     else:
         linear = img.colourspace("scrgb")
         profile = "sRGB" if icc else "none"
+    linear = linear.cast("float")
+    if reduce_to is not None:
+        linear = _reduce(linear, reduce_to / max(linear.width, linear.height)).autorot()
 
     info = SourceInfo(
         path=path,
         sha256=digest,
         format=fmt,
-        width=linear.width,
-        height=linear.height,
+        width=width,
+        height=height,
         has_alpha=linear.hasalpha(),
         bit_depth=bit_depth,
         profile=profile,
         orientation=orientation,
     )
-    return linear.cast("float"), info
+    return linear, info
+
+
+def _reduce(img: pyvips.Image, factor: float) -> pyvips.Image:
+    """Reduce (lanczos3, alpha premultiplicado) y deja el resultado en memoria: la orientación
+    EXIF se aplica después y una rotación de 90° no se puede leer en secuencia."""
+    if factor < 1:
+        if img.hasalpha():
+            img = img.premultiply(max_alpha=1.0).resize(factor).unpremultiply(max_alpha=1.0)
+        else:
+            img = img.resize(factor)
+        img = img.copy(interpretation="scrgb").cast("float")
+    return img.copy_memory()
 
 
 def _same_file(a: Path, b: Path) -> bool:
