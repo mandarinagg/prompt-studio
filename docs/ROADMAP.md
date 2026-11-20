@@ -25,6 +25,11 @@ caché (#31) y la página de comparación, los hicieron subagentes en paralelo.
   - La preview de casi todas las ops queda bajo 150 ms. La de **denoise no** (≈ 280 ms).
   - Al mover el slider de la última op de una cadena, la respuesta queda bajo 30 ms solo si
     esa op es barata. Va como #42, en M3: es un tema de la app.
+  - #42 (2026-11-20): a 1024 px la cadena entera de 10 ops baja de 97 a 52 ms y cada op
+    suelta queda ≤ 22 ms, salvo denoise (49). A 2048 px quedan ≤ 30 ms todas menos blacks
+    levantando el negro (33), sharpen (53) y denoise (99): para esas, render progresivo. El
+    proxy de 1024 px de una foto de 45–58 MP abre en 180–530 ms (antes 0.8–1.7 s). Detalle en
+    MEDIA_PIPELINE.md.
 - **Aprendizaje:** revisar cada op sobre fotos reales encontró 6 fallas que los tests de
   propiedades no veían. Entre ellas: gray world invirtiendo colores, auto_exposure griseando
   una foto de producto, una raya roja del denoise y vibrance sin efecto. Mantener esa revisión

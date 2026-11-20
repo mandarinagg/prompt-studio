@@ -32,7 +32,7 @@ DENOISE_RADIUS = 3.0  # px (imagen original) del filtro guiado
 DENOISE_NOISE = 0.05  # desvío de ruido (en p) que strength = 1 considera alisable
 CHROMA_SIGMA = 3.0  # px (imagen original) del difuminado de color con strength = 1
 VIGNETTE_EV = 2.0
-MAX_CACHED_MASK = 2048 * 2048  # px: máscaras de vignette que se guardan en memoria
+MAX_CACHED_MASK = 2048 * 2048  # px: hasta acá (tamaños de preview) se guardan intermedios
 MIN_SIGMA = 0.3  # por debajo, el desenfoque no cambia nada visible a esa escala
 
 
@@ -67,20 +67,24 @@ def sharpen(img: pyvips.Image, op: Sharpen, scale: float = 1.0) -> pyvips.Image:
 
 # ------------------------------------------------------------------ denoise
 def _guided(p: pyvips.Image, sigma: float, eps: float) -> pyvips.Image:
-    """`p` debe estar en memoria. Los desenfoques se hacen de a dos bandas (p y p², luego a y
-    b): una pasada cada uno. libvips no comparte resultados entre dos lecturas de la misma
-    imagen perezosa: cada lectura recalcula todo lo anterior, y acá las lecturas se anidan
-    (mean, var y a se leen varias veces, y cada desenfoque pide bordes). Por eso cada
-    desenfoque se materializa: el resultado es el mismo, bit a bit, y cuesta 3–4 veces menos
-    (#42)."""
-    moments = _blur(p.bandjoin(p * p), sigma).copy_memory()
+    """Los desenfoques se hacen de a dos bandas (p y p², luego a y b): una pasada cada uno.
+
+    En tamaños de preview cada desenfoque se materializa (`_small_in_memory`): mean, var y a se
+    leen varias veces y libvips recalcula lo anterior en cada lectura. Da los mismos bytes y
+    baja 58 → 49 ms a 1024 px (#42). A resolución completa (export) no: cada copia pesaría
+    100–200 MB."""
+    moments = _small_in_memory(_blur(p.bandjoin(p * p), sigma))
     mean, mean_sq = moments[0], moments[1]
     var = mean_sq - mean * mean
     var = (var > 0).ifthenelse(var, 0.0)
     a = var / (var + eps)
     b = mean - a * mean
-    coeffs = _blur(a.bandjoin(b), sigma).copy_memory()
-    return (coeffs[0] * p + coeffs[1]).copy_memory()
+    coeffs = _small_in_memory(_blur(a.bandjoin(b), sigma))
+    return _small_in_memory(coeffs[0] * p + coeffs[1])
+
+
+def _small_in_memory(img: pyvips.Image) -> pyvips.Image:
+    return img.copy_memory() if img.width * img.height <= MAX_CACHED_MASK else img
 
 
 def denoise(img: pyvips.Image, op: Denoise, scale: float = 1.0) -> pyvips.Image:
@@ -90,7 +94,7 @@ def denoise(img: pyvips.Image, op: Denoise, scale: float = 1.0) -> pyvips.Image:
     rgb, alpha = split_alpha(img)
     c_sigma = CHROMA_SIGMA * op.strength * scale
     if c_sigma >= MIN_SIGMA:
-        lab = rgb.copy(interpretation="scrgb").colourspace("lab").copy_memory()
+        lab = _small_in_memory(rgb.copy(interpretation="scrgb").colourspace("lab"))
         ab = lab.extract_band(1, n=2)
         ab = ab + (_blur(ab, c_sigma) - ab) * op.strength
         rgb = lab.extract_band(0).bandjoin(ab).copy(interpretation="lab").colourspace("scrgb")
@@ -98,7 +102,7 @@ def denoise(img: pyvips.Image, op: Denoise, scale: float = 1.0) -> pyvips.Image:
     # filtro guiado anida desenfoques; sin esto libvips recalcula decode + Lab por tile
     rgb = rgb.copy_memory()
     y = luminance(rgb)
-    p = _perceptual(y).copy_memory()
+    p = _small_in_memory(_perceptual(y))
     eps = (DENOISE_NOISE * op.strength) ** 2
     return join_alpha(_with_luminance(rgb, y, _guided(p, sigma, eps)), alpha)
 

@@ -104,9 +104,9 @@ def decode(path: str | Path, reduce_to: int | None = None) -> tuple[pyvips.Image
 
     Con `reduce_to` devuelve la foto reducida a ese lado largo (proxy de preview, nunca la
     agranda), sin decodificarla entera: un JPEG se lee ya reducido por libjpeg (`jpeg_shrink`)
-    y en modo secuencial (sin guardar la foto decodificada; con > 100 MB libvips la pasaba a
-    un temporal en disco), y la orientación EXIF se aplica sobre la imagen chica. `SourceInfo`
-    describe siempre el original entero.
+    y la orientación EXIF se aplica sobre la imagen chica. `SourceInfo` describe siempre el
+    original entero. (El modo secuencial de libvips resultó más lento: 1.3–2.2× en las fotos
+    de tests/fixtures.)
     """
     path = Path(path).resolve()
     if path.suffix.lower() not in SUFFIXES:
@@ -125,7 +125,7 @@ def decode(path: str | Path, reduce_to: int | None = None) -> tuple[pyvips.Image
     )
     longest = max(width, height)
     if reduce_to is not None:
-        options: dict = {"access": "sequential"}
+        options: dict = {}
         if fmt == "jpeg" and (shrink := jpeg_shrink(longest, reduce_to)) > 1:
             options["shrink"] = shrink
         img = pyvips.Image.new_from_file(str(path), revalidate=True, **options)
@@ -164,8 +164,8 @@ def decode(path: str | Path, reduce_to: int | None = None) -> tuple[pyvips.Image
 
 
 def _reduce(img: pyvips.Image, factor: float) -> pyvips.Image:
-    """Reduce (lanczos3, alpha premultiplicado) y deja el resultado en memoria: la orientación
-    EXIF se aplica después y una rotación de 90° no se puede leer en secuencia."""
+    """Reduce (lanczos3, alpha premultiplicado) y deja el resultado en memoria; la orientación
+    EXIF se aplica después, sobre la imagen chica."""
     if factor < 1:
         if img.hasalpha():
             img = img.premultiply(max_alpha=1.0).resize(factor).unpremultiply(max_alpha=1.0)
