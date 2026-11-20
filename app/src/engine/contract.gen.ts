@@ -12,6 +12,10 @@ export interface Methods {
     params: ApplyPlanParams;
     result: StackState;
   };
+  "asset.export": {
+    params: ExportParams;
+    result: Exported;
+  };
   "asset.history": {
     params: AssetParams;
     result: History;
@@ -59,6 +63,10 @@ export interface Methods {
   "plan.create": {
     params: PlanParams;
     result: PlanCreated;
+  };
+  "plan.draft": {
+    params: DraftParams;
+    result: PlanDraft;
   };
   "preview.render": {
     params: PreviewParams;
@@ -296,6 +304,17 @@ export interface StackState {
   changed: boolean;
   export_hint: Resize | null;
 }
+export interface ExportParams {
+  asset: string;
+  preset?:
+    "original" | "high_quality" | "web" | "catalog_square" | "social_vertical" | "story_9x16";
+  out_dir?: string | null;
+}
+export interface Exported {
+  path: string;
+  out_dir: string;
+  ms: number;
+}
 export interface AssetParams {
   asset: string;
 }
@@ -352,6 +371,14 @@ export interface PlanCreated {
   warnings: string[];
   errors: string[];
   draft: EditPlan | null;
+  export_hint: Resize | null;
+}
+export interface DraftParams {
+  asset: string;
+  plan: EditPlan;
+}
+export interface PlanDraft {
+  draft: EditPlan;
   export_hint: Resize | null;
 }
 export interface PreviewParams {

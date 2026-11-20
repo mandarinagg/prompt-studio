@@ -29,8 +29,13 @@ El diseño pide cuatro cosas:
 - **Métodos de v1:**
   - `project.create|open|info|import|relink`.
   - `asset.state|history|set_stack|apply_plan|undo|redo|jump|reset|undo_group`.
+  - `asset.export` (#59): export simple y síncrono de una foto a `Exportadas/` junto al
+    proyecto (o a `out_dir`), nunca sobrescribe. Bloquea el bucle RPC mientras dura; la cola
+    de jobs (#60) lo reemplaza.
   - `plan.create`, con los proveedores `auto|rules|local_llm`. `cloud` queda afuera hasta que
     exista el consentimiento (#64).
+  - `plan.draft` (#59): recalcula el borrador pila ⊕ plan cuando el usuario cambia casillas,
+    valores o la pila. No guarda nada.
   - `preview.render` y `thumbnail.get`.
   - Además, `ping`, `engine.version` e `image.info`.
 - **Eventos:** son notificaciones JSON-RPC sin `id`, por ahora solo `thumbnail.ready`:

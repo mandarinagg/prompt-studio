@@ -7,6 +7,7 @@ Todo método que cambia algo guarda al terminar (`Session.commit`).
 
 from __future__ import annotations
 
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -14,12 +15,15 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from pstudio import recent
 from pstudio.project import history
+from pstudio.project.export import export_assets
 from pstudio.project.stack import merge
 from pstudio.project.store import add_assets, create, relink
 from pstudio.rpc.server import ENGINE_ERROR, INVALID_PARAMS, Params, RpcError, method
 from pstudio.rpc.session import Session
 from pstudio.schema import Asset, EditPlan
-from pstudio.schema.plan import Resize
+from pstudio.schema.plan import ExportPreset, Resize
+
+EXPORT_DIR = "Exportadas"  # junto a la carpeta del proyecto
 
 
 # ------------------------------------------------------------------------------------- modelos
@@ -293,6 +297,36 @@ def asset_jump(s: Session, p: JumpParams) -> StackState:
 def asset_reset(s: Session, p: AssetParams) -> StackState:
     asset = s.asset(p.asset)
     return _state(asset, _push(s, asset, EditPlan(), "Restablecer", None))
+
+
+class ExportParams(AssetParams):
+    preset: ExportPreset = "web"
+    out_dir: str | None = Field(default=None, min_length=1)  # None: `Exportadas/` junto al proyecto
+
+
+class Exported(BaseModel):
+    path: str
+    out_dir: str
+    ms: float
+
+
+@method("asset.export")
+def asset_export(s: Session, p: ExportParams) -> Exported:
+    """Export simple y síncrono de una foto (la cola de jobs llega con #60).
+
+    Mientras dura bloquea el bucle RPC (segundos con fotos de 45 MP); la cola lo resuelve.
+    """
+    s.asset(p.asset)  # error claro si no existe
+    out_dir = Path(p.out_dir) if p.out_dir else s.require_path().parent / EXPORT_DIR
+    t0 = time.perf_counter()
+    try:
+        (r,) = export_assets(s.require(), [p.asset], out_dir, p.preset)
+    except OSError as e:  # no se pudo crear la carpeta destino
+        raise RpcError(ENGINE_ERROR, f"no se pudo crear la carpeta {out_dir.name}") from e
+    if r.error is not None or r.dest is None:
+        raise RpcError(ENGINE_ERROR, r.error or "no se pudo exportar")
+    ms = round((time.perf_counter() - t0) * 1000, 2)
+    return Exported(path=str(r.dest), out_dir=str(out_dir), ms=ms)
 
 
 @method("asset.undo_group")
