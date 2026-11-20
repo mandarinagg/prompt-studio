@@ -146,6 +146,7 @@ button.asset:disabled {
   position: absolute;
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
   outline: 1px solid var(--text);
+  outline-offset: -1px; /* el borde no se corta cuando el marco toca el borde de la foto */
   cursor: move;
   touch-action: none;
 }
@@ -154,6 +155,7 @@ button.asset:disabled {
 }
 .crop-frame:focus-visible {
   outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
 }
 .crop-grid {
   position: absolute;

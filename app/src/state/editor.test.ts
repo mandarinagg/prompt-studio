@@ -183,4 +183,76 @@ describe("store del editor", () => {
     expect(refineSide(1900, 1000, 2)).toBe(2048);
     expect(refineSide(0, 0, 1)).toBe(1024);
   });
+
+  it("no pide la foto con una pila vacía antes de saber la pila guardada", async () => {
+    const f = fakeApi({});
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    (f.api as any).call = (async (m: Method, p: any) => {
+      f.calls.push({ method: m, params: p });
+      if (m === "asset.state") {
+        await gate;
+        return state({ operations: [{ op: "exposure", ev: 1 }] });
+      }
+      if (m === "preview.render") return f.preview();
+      throw new Error(m);
+    }) as EditorApi["call"];
+    const store = createEditorStore(f.api);
+    const opening = store.getState().open(asset);
+    store.getState().setViewport(1600, 900); // el visor se monta y se mide antes de la respuesta
+    await settle();
+    expect(f.calls.filter((c) => c.method === "preview.render")).toEqual([]);
+    release();
+    await opening;
+    await settle();
+    expect(f.calls.find((c) => c.method === "preview.render")?.params.stack).toEqual({
+      operations: [{ op: "exposure", ev: 1 }],
+    });
+  });
+
+  it("si deshacer saca el recorte, se sale del modo recorte", async () => {
+    const f = fakeApi({});
+    (f.api as any).call = (async (m: Method) => {
+      if (m === "asset.state") return state({ operations: [{ op: "crop", aspect_ratio: "1:1" }] }, { cursor: 1, can_undo: true });
+      if (m === "asset.undo") return state({}, { changed: true, can_redo: true });
+      if (m === "preview.render") return f.preview();
+      throw new Error(m);
+    }) as EditorApi["call"];
+    const store = createEditorStore(f.api);
+    await store.getState().open(asset);
+    store.getState().setCropping(true);
+    await store.getState().undo();
+    expect(store.getState().cropping).toBe(false);
+  });
+
+  it("un guardado que termina no pisa lo que se está arrastrando después", async () => {
+    const f = fakeApi({});
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    (f.api as any).call = (async (m: Method, p: any) => {
+      f.calls.push({ method: m, params: p });
+      if (m === "asset.state") return state();
+      if (m === "preview.render") return f.preview();
+      if (m === "asset.set_stack") {
+        await gate;
+        return state(p.stack, { cursor: 1, can_undo: true, changed: true });
+      }
+      throw new Error(m);
+    }) as EditorApi["call"];
+    const store = createEditorStore(f.api);
+    store.getState().setViewport(1600, 900);
+    await store.getState().open(asset);
+    await settle();
+    const a = { operations: [{ op: "contrast" as const, amount: 20 }] };
+    const b = { operations: [{ op: "contrast" as const, amount: 20 }, { op: "vibrance" as const, amount: 30 }] };
+    const saving = store.getState().commit(a, "Contraste +20");
+    store.getState().live(b);
+    release();
+    await saving;
+    await settle();
+    expect(store.getState().stack).toEqual(b);
+    expect(store.getState().saved?.can_undo).toBe(true);
+    const last = f.calls.filter((c) => c.method === "preview.render").at(-1)!;
+    expect(last.params.stack).toEqual(b);
+  });
 });

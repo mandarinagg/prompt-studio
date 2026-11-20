@@ -22,6 +22,7 @@ export function Viewer({ holdBefore, split }: ViewerProps) {
   const cropping = useEditor((s) => s.cropping);
   const error = useEditor((s) => s.error);
   const stats = useEditor((s) => s.stats);
+  const file = useEditor((s) => s.asset?.file ?? "");
   const ref = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState({ width: 0, height: 0 });
   const [splitAt, setSplitAt] = useState(50);
@@ -89,7 +90,12 @@ export function Viewer({ holdBefore, split }: ViewerProps) {
     >
       {shown && (
         <div className="viewer-stage" style={{ width: w, height: h }}>
-          <img className="viewer-img" src={shown.url} alt="" draggable={false} />
+          <img
+            className="viewer-img"
+            src={shown.url}
+            alt={holdBefore && before ? `${file}, original` : file}
+            draggable={false}
+          />
           {showSplit && (
             <>
               <img
@@ -142,6 +148,7 @@ function SplitHandle({ at, onChange }: { at: number; onChange(v: number): void }
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(at)}
+      aria-valuetext={`${Math.round(at)}% antes`}
       onPointerDown={(e) => e.currentTarget.setPointerCapture(e.pointerId)}
       onPointerMove={drag}
       onKeyDown={(e) => {
@@ -163,19 +170,28 @@ function CropFrame({ width, height }: { width: number; height: number }) {
   const stack = useEditor((s) => s.stack);
   const crop = findOp(stack, "crop");
   const saved = crop ? frameFor(width, height, crop) : null;
-  const [frame, setFrame] = useState<Rect | null>(saved);
+  const [frame, setFrameState] = useState<Rect | null>(saved);
+  const latest = useRef<Rect | null>(saved); // el último marco, sin esperar al render
+  const setFrame = (f: Rect | null) => {
+    latest.current = f;
+    setFrameState(f);
+  };
   const start = useRef<{ x: number; y: number; frame: Rect } | null>(null);
+  const keyStart = useRef<Rect | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   // Si la pila cambia desde afuera (otra proporción, deshacer), el marco la sigue.
   const savedKey = JSON.stringify(saved);
   useEffect(() => {
-    if (!start.current) setFrame(saved);
+    if (!start.current && !keyStart.current) setFrame(saved);
   }, [savedKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!frame || !crop) return null;
 
-  const commit = (f: Rect) => {
+  // Solo se guarda si el marco se movió (un clic sin arrastrar no crea historial).
+  const commit = (from: Rect) => {
+    const f = latest.current;
+    if (!f || (f.x === from.x && f.y === from.y)) return;
     const s = editorStore.getState();
     s.commit(setOp(s.stack, { op: "crop", rect: f }), "Encuadre");
   };
@@ -207,18 +223,30 @@ function CropFrame({ width, height }: { width: number; height: number }) {
         setFrame(moveFrame(s.frame, (e.clientX - s.x) / r.width, (e.clientY - s.y) / r.height));
       }}
       onPointerUp={() => {
-        if (!start.current) return;
+        const s = start.current;
+        if (!s) return;
         start.current = null;
-        commit(frame);
+        commit(s.frame);
+      }}
+      onPointerCancel={() => {
+        const s = start.current;
+        start.current = null;
+        if (s) setFrame(s.frame);
       }}
       onKeyDown={(e) => {
         const step = e.shiftKey ? 0.05 : 0.01;
         const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
         if (!d) return;
         e.preventDefault();
-        const next = moveFrame(frame, d[0], d[1]);
-        setFrame(next);
-        commit(next);
+        // Con las flechas el marco se mueve al instante y se guarda una vez, al soltar la tecla.
+        if (!keyStart.current) keyStart.current = latest.current;
+        setFrame(moveFrame(latest.current ?? frame, d[0], d[1]));
+      }}
+      onKeyUp={(e) => {
+        if (!e.key.startsWith("Arrow") || !keyStart.current) return;
+        const from = keyStart.current;
+        keyStart.current = null;
+        commit(from);
       }}
     >
       <span className="crop-grid" aria-hidden="true" />

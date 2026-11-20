@@ -48,6 +48,8 @@ export function isNoop(op: Operation): boolean {
       return (op.degrees ?? 0) === 0;
     case "denoise":
       return (op.strength ?? 0) === 0;
+    case "auto_exposure":
+      return (op.strength ?? 1) === 0;
     case "contrast":
     case "highlights":
     case "shadows":
@@ -59,7 +61,7 @@ export function isNoop(op: Operation): boolean {
     case "vignette":
       return (op.amount ?? 0) === 0;
     default:
-      return false; // auto y recorte siempre hacen algo
+      return false; // balance auto y recorte siempre hacen algo
   }
 }
 

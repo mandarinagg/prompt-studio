@@ -37,7 +37,8 @@ export function EditorScreen() {
   }, [canSplit]);
 
   // ←/→: foto anterior o siguiente (salteando las que no se encuentran).
-  const neighbour = (delta: 1 | -1) => {
+  const neighbour = useRef<(delta: 1 | -1) => void>(() => {});
+  neighbour.current = (delta) => {
     const usable = assets.filter((a) => !a.missing || a.id === asset.id);
     const i = usable.findIndex((a) => a.id === asset.id);
     const next = usable[i + delta];
@@ -45,8 +46,16 @@ export function EditorScreen() {
   };
 
   useEffect(() => {
+    const isBackslash = (e: KeyboardEvent) => e.key === "\\" || e.code === "Backslash";
     const down = (e: KeyboardEvent) => {
       const s = editorStore.getState();
+      if (isTyping(e.target)) return; // Esc en un campo lo maneja el campo (cancela lo escrito)
+      // `\` va antes que los modificadores: en teclados en español se escribe con AltGr (Ctrl+Alt).
+      if (isBackslash(e)) {
+        e.preventDefault();
+        setHoldBefore(true);
+        return;
+      }
       if (e.key === "Escape") {
         if (document.querySelector("[role=dialog]")) return;
         e.preventDefault();
@@ -54,7 +63,6 @@ export function EditorScreen() {
         else closeEditor();
         return;
       }
-      if (isTyping(e.target)) return;
       const key = e.key.toLowerCase();
       if (e.ctrlKey && !e.altKey) {
         if (key === "z" && !e.shiftKey) s.undo();
@@ -63,20 +71,18 @@ export function EditorScreen() {
         e.preventDefault();
         return;
       }
-      if (e.altKey || e.metaKey) return;
-      if (e.key === "\\") {
-        e.preventDefault();
-        setHoldBefore(true);
-      } else if (key === "z") {
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      if (key === "z") {
         s.setZoom(s.zoom === "fit" ? "actual" : "fit");
       } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
         if ((e.target as HTMLElement)?.closest?.("[role=slider], .crop-frame")) return;
         e.preventDefault();
-        neighbour(e.key === "ArrowLeft" ? -1 : 1);
+        if (!e.repeat) neighbour.current(e.key === "ArrowLeft" ? -1 : 1);
       }
     };
     const up = (e: KeyboardEvent) => {
-      if (e.key === "\\") setHoldBefore(false);
+      // Con AltGr la tecla puede soltarse como otra; soltar AltGr también termina el "mantener".
+      if (isBackslash(e) || e.key === "AltGraph" || e.key === "Alt" || e.key === "Control") setHoldBefore(false);
     };
     const blur = () => setHoldBefore(false);
     window.addEventListener("keydown", down);
@@ -86,8 +92,9 @@ export function EditorScreen() {
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
       window.removeEventListener("blur", blur);
+      if (holdTimer.current !== null) window.clearTimeout(holdTimer.current);
     };
-  });
+  }, []);
 
   // ◐: mantener muestra el original; un clic alterna la vista dividida.
   const comparePress = () => {
@@ -136,6 +143,12 @@ export function EditorScreen() {
             aria-label={compareLabel}
             onPointerDown={comparePress}
             onPointerUp={compareRelease}
+            onPointerCancel={() => {
+              if (holdTimer.current !== null) window.clearTimeout(holdTimer.current);
+              holdTimer.current = null;
+              held.current = false;
+              setHoldBefore(false);
+            }}
             onPointerLeave={() => {
               if (holdTimer.current !== null) window.clearTimeout(holdTimer.current);
               holdTimer.current = null;

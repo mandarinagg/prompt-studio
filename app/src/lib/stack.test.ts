@@ -69,4 +69,9 @@ describe("pila de ajustes", () => {
     expect(groupChanged(s, "light")).toBe(false);
     expect(groupChanged(toggleAuto({}, "auto_exposure"), "light")).toBe(true);
   });
+
+  it("auto_exposure con fuerza 0 es neutra, como en el engine", () => {
+    expect(opsOf(normalize({ operations: [{ op: "auto_exposure", strength: 0 }] }))).toEqual([]);
+    expect(opsOf(normalize({ operations: [{ op: "auto_exposure" }] }))).toEqual([{ op: "auto_exposure" }]);
+  });
 });

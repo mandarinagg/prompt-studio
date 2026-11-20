@@ -119,7 +119,7 @@ function Geometry() {
         </Button>
       </div>
       {crop && (
-        <Button icon="crop" aria-pressed={cropping} onClick={() => editorStore.getState().setCropping(!cropping)}>
+        <Button icon="crop" onClick={() => editorStore.getState().setCropping(!cropping)}>
           {cropping ? "Listo" : "Encuadrar"}
         </Button>
       )}

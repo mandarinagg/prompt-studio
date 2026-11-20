@@ -3,7 +3,7 @@
 // Tauri; las previews pasan por el bucle "gana el último" (preview.ts).
 import { createStore, type StoreApi } from "zustand/vanilla";
 import type { AssetSummary, call as engineCall, EditPlan, StackState } from "../engine/client";
-import { normalize, withoutCrop } from "../lib/stack";
+import { findOp, normalize, withoutCrop } from "../lib/stack";
 import { createPreviewLoop, type PreviewJob, type PreviewResult } from "./preview";
 
 export interface EditorApi {
@@ -104,17 +104,20 @@ export function createEditorStore(api: EditorApi): StoreApi<EditorState> {
 
     const shownStack = (stack: EditPlan) => normalize(get().cropping ? withoutCrop(stack) : stack);
 
+    // Hasta saber la pila guardada no se pide nada: se vería la foto sin editar.
     const requestAfter = (longSide = side()) => {
-      const { asset, stack } = get();
-      if (asset) loop.request({ kind: "after", asset: asset.id, stack: shownStack(stack), longSide });
+      const { asset, stack, saved } = get();
+      if (asset && saved) loop.request({ kind: "after", asset: asset.id, stack: shownStack(stack), longSide });
     };
 
     const requestBefore = () => {
-      const { asset } = get();
-      if (asset) loop.request({ kind: "before", asset: asset.id, stack: { operations: [] }, longSide: side() });
+      const { asset, saved } = get();
+      if (asset && saved) loop.request({ kind: "before", asset: asset.id, stack: { operations: [] }, longSide: side() });
     };
 
-    const apply = (s: StackState) => set({ saved: s, stack: s.stack });
+    // Si la pila nueva no tiene recorte (deshacer, restablecer), no queda un modo recorte invisible.
+    const apply = (s: StackState) =>
+      set({ saved: s, stack: s.stack, cropping: get().cropping && !!findOp(s.stack, "crop") });
 
     const load = async () => {
       const asset = get().asset;
@@ -173,7 +176,8 @@ export function createEditorStore(api: EditorApi): StoreApi<EditorState> {
 
       live(stack) {
         set({ stack });
-        requestAfter(DRAG_SIDE);
+        // Al 100% se arrastra a la resolución completa: con 1024 la foto se achicaría a la mitad.
+        requestAfter(get().zoom === "actual" ? side() : DRAG_SIDE);
       },
 
       async commit(stack, label) {
@@ -183,10 +187,15 @@ export function createEditorStore(api: EditorApi): StoreApi<EditorState> {
         try {
           const s = await api.call("asset.set_stack", { asset: asset.id, stack: normalize(stack), label });
           if (get().asset?.id !== asset.id) return;
+          // Si mientras se guardaba ya se empezó a mover otro control, lo que se ve no se pisa.
+          if (get().stack !== stack) {
+            set({ saved: s });
+            return;
+          }
           apply(s);
         } catch (err) {
           const saved = get().saved;
-          if (saved) set({ stack: saved.stack });
+          if (saved && get().stack === stack) set({ stack: saved.stack });
           api.notify("error", `No se pudo guardar el ajuste: ${tail(err)}`);
         }
         requestAfter();
