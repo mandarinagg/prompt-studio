@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { hasGeometry } from "../lib/stack";
 import { appStore, editorStore, useApp, useEditor } from "../state/store";
-import { IconButton } from "../ui/Button";
+import { Button, IconButton } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Tooltip } from "../ui/Tooltip";
 import { AdjustPanel } from "./AdjustPanel";
+import { ExportDialog } from "./ExportDialog";
 import { PlanPanel } from "./PlanPanel";
 import { focusPrompt, PromptBox } from "./PromptBox";
 import { Viewer } from "./Viewer";
@@ -30,6 +31,7 @@ export function EditorScreen() {
   const assets = useApp((s) => s.project?.assets ?? []);
   const [holdBefore, setHoldBefore] = useState(false);
   const [split, setSplit] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const holdTimer = useRef<number | null>(null);
   const held = useRef(false);
 
@@ -68,6 +70,9 @@ export function EditorScreen() {
       const key = e.key.toLowerCase();
       if (e.ctrlKey && !e.altKey) {
         if (key === "k") focusPrompt();
+        else if (key === "e") {
+          if (!s.asset?.missing) setExporting(true);
+        }
         else if (key === "z" && !e.shiftKey) s.undo();
         else if ((key === "z" && e.shiftKey) || key === "y") s.redo();
         else return;
@@ -172,7 +177,11 @@ export function EditorScreen() {
             <span>Antes/Después</span>
           </button>
         </Tooltip>
+        <Button variant="secondary" shortcut="Ctrl+E" disabled={asset.missing} onClick={() => setExporting(true)}>
+          Exportar…
+        </Button>
       </header>
+      <ExportDialog key={asset.id} open={exporting} onOpenChange={setExporting} />
       <div className="editor-body">
         <Viewer holdBefore={holdBefore} split={split} />
         <aside className="panel" aria-label="Pedido y ajustes de la foto">

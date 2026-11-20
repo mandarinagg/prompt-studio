@@ -378,6 +378,51 @@ button.asset:disabled {
   white-space: nowrap;
 }
 
+/* ---- Exportar ---- */
+.presets {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.presets legend {
+  margin-bottom: var(--sp-2);
+}
+.preset {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--raised);
+  cursor: pointer;
+}
+.preset.is-on {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+.preset input {
+  accent-color: var(--accent);
+}
+.preset-text {
+  display: grid;
+}
+.preset-title {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.preset-detail {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+.selectable {
+  user-select: text;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 1100px) {
   .editor-body {
     grid-template-columns: minmax(0, 1fr) 280px;
