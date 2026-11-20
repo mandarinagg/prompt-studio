@@ -111,7 +111,8 @@ antivirus revisando la foto de 36 MB). No se le atribuye a ningún cambio.
 
 ## Consecuencias
 - El presupuesto de arrastre (< 100 ms a ≈1024 px) se cumple con margen. La preview refinada
-  a 2048 px, con una op temprana, tarda 140–190 ms; la mejora es #42.
+  a 2048 px, con una op temprana, tarda 140–190 ms; la mejora es #42. (Después de #42, en el
+  bench del engine: 52 ms a 1024 y 141 ms a 2048 con la cadena entera; ver MEDIA_PIPELINE.md.)
 - Para bajar el transporte conviene atacar el encode y la resolución: renderizar al tamaño
   real del visor, que en un monitor de 1080p es menor a 2048 px, o un JPEG más liviano
   mientras se arrastra. Cambiar el canal no ayuda.

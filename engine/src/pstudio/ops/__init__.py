@@ -7,11 +7,11 @@ desde afuera ni de ejecutar código del plan (regla 1 de CLAUDE.md).
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import pyvips
 
-from pstudio.analysis import analyze, reduce_for_analysis
+from pstudio.analysis import ImageStats, analyze, reduce_for_analysis
 from pstudio.ops import color, detail, geometry, tonal
 from pstudio.ops._tone import apply_tone_curve, compose
 from pstudio.schema import EditPlan, Operation
@@ -60,6 +60,14 @@ class RenderState:
     scale: float
     analysis: pyvips.Image | None = None  # reduce_for_analysis(entrada) tras las mismas etapas
     analysis_scale: float = 0.0
+    # medición de `analysis`, calculada la primera vez que una op automática la pide. El estado
+    # cacheado de un prefijo la conserva: al mover el slider de esa op no se vuelve a medir.
+    _stats: list[ImageStats] = field(default_factory=list, compare=False, repr=False)
+
+    def stats(self) -> ImageStats:
+        if not self._stats:
+            self._stats.append(analyze(self.analysis))
+        return self._stats[0]
 
 
 def plan_stages(plan: EditPlan) -> list[Stage]:
@@ -105,7 +113,7 @@ def run_stage(stage: Stage, state: RenderState, keep_analysis: bool) -> RenderSt
         curve = compose([tonal.CURVES[o.op](o) for o in stage.ops])
         fn = lambda image, _s: apply_tone_curve(image, curve)  # noqa: E731
     elif first.op in color.AUTO:
-        stats = analyze(state.analysis)
+        stats = state.stats()
         fn = lambda image, _s: color.AUTO[first.op](image, first, stats)  # noqa: E731
     else:
         fn = lambda image, s: apply_op(image, first, s)  # noqa: E731

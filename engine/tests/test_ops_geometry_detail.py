@@ -261,6 +261,27 @@ def test_vignette_does_not_depend_on_resolution():
     np.testing.assert_allclose(small[::10, ::10], big[2::40, 2::40], atol=0.02)
 
 
+def test_vignette_reuses_the_radial_mask_while_the_amount_changes():
+    # Al mover el slider de amount solo cambia la ganancia: la máscara (por tamaño y
+    # midpoint) se calcula una vez. Con o sin caché el resultado es el mismo, bit a bit.
+    D.vignette_falloff.cache_clear()
+    arr = np.random.default_rng(1).uniform(0, 1, (64, 96, 3))
+    first = run(arr, op("vignette", amount=-30))
+    for amount in (-40, -50, 20):
+        run(arr, op("vignette", amount=amount))
+    info = D.vignette_falloff.cache_info()
+    assert (info.misses, info.hits) == (1, 3)
+    D.vignette_falloff.cache_clear()
+    gain = D.vignette_gain(96, 64, op("vignette", amount=-30), cache=False)
+    np.testing.assert_array_equal(first, (scrgb(arr) * gain).numpy())
+
+
+def test_vignette_does_not_cache_full_resolution_masks():
+    D.vignette_falloff.cache_clear()
+    D.vignette_gain(6000, 4000, op("vignette", amount=-30))
+    assert D.vignette_falloff.cache_info().currsize == 0
+
+
 def test_vignette_midpoint_moves_the_falloff():
     arr = np.full((81, 121, 3), 0.2, np.float32)
     near = run(arr, op("vignette", amount=-80, midpoint=10))[40, 100, 0]

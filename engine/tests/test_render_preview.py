@@ -6,7 +6,14 @@ import pyvips
 from imaging import fixture, synthetic_rgb, to_vips
 
 from pstudio.ops import apply_plan, plan_stages
-from pstudio.render import PreviewCache, Proxy, make_proxy, render_preview, sha256_file
+from pstudio.render import (
+    PreviewCache,
+    Proxy,
+    decode,
+    make_proxy,
+    render_preview,
+    sha256_file,
+)
 from pstudio.render.preview import image_bytes, prefix_keys
 from pstudio.schema import EditPlan
 
@@ -136,6 +143,26 @@ def test_auto_ops_remeasure_when_something_upstream_changes(proxy):
     assert cache.stages_computed - before == 1
 
 
+def test_moving_an_auto_op_does_not_remeasure_its_unchanged_input(proxy, monkeypatch):
+    # La medición depende solo de la copia de análisis que llega a la op (el prefijo), no de
+    # su strength: al mover ese slider se reutiliza. La op automática siguiente sí vuelve a
+    # medir, porque lo que le llega cambió.
+    import pstudio.ops as ops
+
+    calls = []
+    real = ops.analyze
+    monkeypatch.setattr(ops, "analyze", lambda img: calls.append(1) or real(img))
+    cache = PreviewCache()
+    render_preview(cache, proxy, plan(AUTO_CHAIN))
+    assert len(calls) == 2
+    for strength in (0.5, 0.7):
+        calls.clear()
+        p = plan(changed(AUTO_CHAIN, "auto_exposure", strength=strength))
+        out = render_preview(cache, proxy, p)
+        assert len(calls) == 1  # solo auto_white_balance
+        assert same_bytes(out, reference(proxy, p))
+
+
 def test_entries_without_the_analysis_copy_are_not_reused_by_auto_ops(proxy):
     cache = PreviewCache()
     render_preview(cache, proxy, plan(CHAIN))  # sin ops automáticas: no se guarda la copia
@@ -241,6 +268,51 @@ def test_make_proxy_reduces_and_keeps_the_verified_hash(tmp_path):
     assert sha256_file(src) == digest  # el original no se toca
     small, _ = make_proxy(src, long_side=2048)  # más chica que el proxy: no se agranda
     assert (small.image.width, small.image.height, small.scale) == (600, 400, 1.0)
+
+
+def _big_jpeg(path, w: int, h: int, orientation: int = 1):
+    # gradientes, ondas de ~300 px y algo de ruido: sin detalle al borde de Nyquist del proxy
+    # (ahí promediar en gamma, como hace libjpeg, sí se nota: ver docs/MEDIA_PIPELINE.md)
+    y, x = np.mgrid[0:h, 0:w]
+    noise = np.random.default_rng(7).normal(0, 4, (h, w, 3))
+    arr = np.stack([x / w * 255, y / h * 255, 128 + 100 * np.sin(x / 50) * np.cos(y / 40)], -1)
+    img = to_vips(np.clip(arr + noise, 0, 255).astype(np.uint8)).copy()
+    if orientation != 1:
+        img.set_type(pyvips.GValue.gint_type, "orientation", orientation)
+    img.write_to_file(str(path), Q=92)
+    return path
+
+
+def test_make_proxy_of_a_big_jpeg_decodes_it_already_reduced(tmp_path, monkeypatch):
+    # #42: abrir una foto grande no decodifica los 24–58 MP enteros. libjpeg reduce ×2/×4/×8
+    # al decodificar mientras queden ≥ 2× los píxeles pedidos; el resto, lanczos3 en lineal.
+    src = _big_jpeg(tmp_path / "grande.jpg", 4096, 2730)
+    loads = []
+    real = pyvips.Image.new_from_file
+    monkeypatch.setattr(
+        pyvips.Image, "new_from_file", lambda *a, **kw: loads.append(kw) or real(*a, **kw)
+    )
+    proxy, info = make_proxy(src, long_side=512)
+    assert any(kw.get("shrink") == 4 for kw in loads)  # 4096 / 4 = 1024 = 2 × 512
+    assert (info.width, info.height) == (4096, 2730)  # el tamaño del original, no el leído
+    assert (proxy.image.width, proxy.image.height) == (512, 341)
+    assert proxy.scale == pytest.approx(512 / 4096)
+    assert proxy.image.format == "float" and proxy.image.interpretation == "scrgb"
+    monkeypatch.undo()
+    full, _ = decode(src)
+    want = full.resize(512 / 4096).colourspace("srgb").cast("uchar").numpy().astype(int)
+    got = proxy.image.colourspace("srgb").cast("uchar").numpy().astype(int)
+    assert np.abs(got - want).mean() < 1.0  # casi igual que reducir la foto entera
+
+
+def test_make_proxy_applies_exif_orientation_after_reducing(tmp_path):
+    src = _big_jpeg(tmp_path / "rotada.jpg", 2048, 1024, orientation=6)
+    proxy, info = make_proxy(src, long_side=256)
+    assert (info.width, info.height, info.orientation) == (1024, 2048, 6)
+    assert (proxy.image.width, proxy.image.height) == (128, 256)
+    full, _ = decode(src)
+    want = full.resize(256 / 2048).numpy()
+    np.testing.assert_allclose(proxy.image.numpy(), want, atol=0.05)
 
 
 def test_real_photo_proxy_is_bit_exact():
