@@ -179,22 +179,18 @@ export function PlanPanel() {
   return (
     <section className="plan" aria-label="Plan propuesto">
       <h2 className="panel-title">Plan propuesto</h2>
-      {question ? (
-        <Clarification question={question} />
-      ) : (
-        <>
-          {p?.explanation && <p className="plan-explanation">{p.explanation}</p>}
-          {plan.rows.length > 0 && (
-            <ul className="plan-rows">
-              {plan.rows.map((r) => (
-                <Row key={r.index} row={r} draft={plan.draft} />
-              ))}
-            </ul>
-          )}
-          {plan.rows.length === 0 && unsupported.length === 0 && (
-            <p className="field-hint">No encontré ajustes para ese pedido. Probá con otras palabras.</p>
-          )}
-        </>
+      {/* Con reglas puede venir lo concreto y una pregunta por lo otro: se ven las dos cosas. */}
+      {question && <Clarification question={question} />}
+      {p?.explanation && <p className="plan-explanation">{p.explanation}</p>}
+      {plan.rows.length > 0 && (
+        <ul className="plan-rows">
+          {plan.rows.map((r) => (
+            <Row key={r.index} row={r} draft={plan.draft} />
+          ))}
+        </ul>
+      )}
+      {!question && plan.rows.length === 0 && unsupported.length === 0 && (
+        <p className="field-hint">No encontré ajustes para ese pedido. Probá con otras palabras.</p>
       )}
       {unsupported.length > 0 && (
         <ul className="plan-unsupported">
@@ -217,11 +213,11 @@ export function PlanPanel() {
           ))}
         </ul>
       )}
-      {resize && !question && (
+      {resize && (
         <p className="field-hint">El tamaño ({resizeText(resize)}) se usa al exportar, no cambia la foto.</p>
       )}
       <div className="plan-actions">
-        {!question && (
+        {(!question || plan.rows.length > 0) && (
           <Button variant="primary" disabled={!hasIncluded(plan)} onClick={() => void editorStore.getState().applyPlan()}>
             Aplicar
           </Button>

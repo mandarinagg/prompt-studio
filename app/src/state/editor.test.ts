@@ -259,7 +259,7 @@ describe("store del editor", () => {
 
 // ------------------------------------------------------------------------------ pedido y plan
 // Un engine falso con lo justo: una pila guardada y una fusión que suma exposición.
-function planEngine(opts: { plan?: EditPlan; gate?: Promise<void> } = {}) {
+function planEngine(opts: { plan?: EditPlan; gate?: Promise<void>; draftFails?: () => boolean } = {}) {
   const f = fakeApi({});
   let saved: EditPlan = { operations: [{ op: "exposure", ev: 0.3 }] };
   const merge = (stack: EditPlan, plan: EditPlan): EditPlan => {
@@ -285,7 +285,10 @@ function planEngine(opts: { plan?: EditPlan; gate?: Promise<void> } = {}) {
       const draft = merge(saved, plan);
       return { plan: { ...plan, source_prompt: p.prompt }, provider: "rules", ms: 1, warnings: [], errors: [], draft, export_hint: null };
     }
-    if (m === "plan.draft") return { draft: merge(p.stack ?? saved, p.plan), export_hint: null };
+    if (m === "plan.draft") {
+      if (opts.draftFails?.()) throw new EngineError("se cayó", null);
+      return { draft: merge(p.stack ?? saved, p.plan), export_hint: null };
+    }
     if (m === "asset.apply_plan") {
       saved = merge(saved, p.plan);
       return state(saved, { cursor: 1, label: p.label, can_undo: true, changed: true });
@@ -400,6 +403,36 @@ describe("pedido y borrador del plan", () => {
     expect(afterRenders(e).at(-1)).toEqual({ operations: [{ op: "exposure", ev: 0.3 }] });
     await store.getState().applyPlan();
     expect(e.calls.some((c) => c.method === "asset.apply_plan")).toBe(false);
+  });
+
+  it("un plan con ajustes y una pregunta muestra el borrador y deja aplicar lo concreto", async () => {
+    const e = planEngine({
+      plan: { source_prompt: "más luz y recortala", operations: [{ op: "exposure", ev: 0.5 }], clarification: "¿A qué proporción la recorto?" },
+    });
+    const store = await openWith(e);
+    await store.getState().ask("más luz y recortala");
+    await settle();
+    expect(store.getState().plan?.draft?.operations).toEqual([{ op: "exposure", ev: 0.8 }]);
+    await store.getState().applyPlan();
+    await settle();
+    const applied = e.calls.find((c) => c.method === "asset.apply_plan")!;
+    expect(applied.params.plan.operations).toEqual([{ op: "exposure", ev: 0.5 }]);
+    expect(store.getState().stack).toEqual({ operations: [{ op: "exposure", ev: 0.8 }] });
+  });
+
+  it("si plan.draft falla, se vuelve a ver la pila (no un borrador viejo que no coincide)", async () => {
+    let fail = false;
+    const e = planEngine({ draftFails: () => fail });
+    const store = await openWith(e);
+    await store.getState().ask("más luz");
+    await settle();
+    expect(store.getState().plan?.draft).not.toBeNull();
+    fail = true;
+    store.getState().toggleRow(1);
+    await settle();
+    expect(store.getState().plan?.draft).toBeNull();
+    expect(afterRenders(e).at(-1)).toEqual({ operations: [{ op: "exposure", ev: 0.3 }] });
+    expect(e.notes.some((n) => n.includes("No se pudo mostrar el plan"))).toBe(true);
   });
 
   it("un plan solo con 'no disponible' no deja borrador", async () => {

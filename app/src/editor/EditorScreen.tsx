@@ -54,6 +54,8 @@ export function EditorScreen() {
     const down = (e: KeyboardEvent) => {
       const s = editorStore.getState();
       if (isTyping(e.target)) return; // Esc en un campo lo maneja el campo (cancela lo escrito)
+      // Con un diálogo abierto (export) los atajos del editor no corren: el diálogo maneja Esc.
+      if (document.querySelector("[role=dialog]")) return;
       // `\` va antes que los modificadores: en teclados en español se escribe con AltGr (Ctrl+Alt).
       if (isBackslash(e)) {
         e.preventDefault();
@@ -61,7 +63,6 @@ export function EditorScreen() {
         return;
       }
       if (e.key === "Escape") {
-        if (document.querySelector("[role=dialog]")) return;
         e.preventDefault();
         if (s.cropping) s.setCropping(false);
         else closeEditor();

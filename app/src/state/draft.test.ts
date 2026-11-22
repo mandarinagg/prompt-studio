@@ -68,6 +68,19 @@ describe("borrador del plan", () => {
     expect(clampEdit(sharpen, -3)).toBe(0);
   });
 
+  it("clampEdit ajusta al paso del slider: los enteros del esquema no reciben decimales", () => {
+    const vibrance = rowAdjustment({ op: "vibrance", amount: 10 })!;
+    expect(clampEdit(vibrance, 12.5)).toBe(13);
+    expect(clampEdit(vibrance, 12.4)).toBe(12);
+    const denoise = rowAdjustment({ op: "denoise", strength: 0.3 })!;
+    expect(clampEdit(denoise, 33.3)).toBe(33);
+    const ev = rowAdjustment({ op: "exposure", ev: 0.4 })!;
+    expect(clampEdit(ev, 0.42)).toBe(0.4);
+    expect(clampEdit(ev, 0.15)).toBe(0.15); // sin basura de coma flotante (0.15000000000000002)
+    const straighten = rowAdjustment({ op: "straighten", degrees: 1 })!;
+    expect(clampEdit(straighten, 1.23)).toBe(1.2);
+  });
+
   it("solo unsupported o solo clarification: nada que aplicar ni que mostrar", () => {
     const onlyUnsupported = ready({ operations: [], unsupported: [{ request: "quitar el fondo", reason: "no hay" }] });
     expect(hasIncluded(onlyUnsupported)).toBe(false);

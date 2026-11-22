@@ -47,10 +47,14 @@ export function planValue(op: Operation, a: Adjustment): number {
   return Math.round((v / (a.scale ?? 1)) * 1e6) / 1e6;
 }
 
-/** Recorta al rango del slider; vacío o inválido → undefined (vuelve al valor del plan). */
+/**
+ * Recorta al rango del slider y ajusta a su paso (los campos enteros del esquema rechazan
+ * decimales); vacío o inválido → undefined (vuelve al valor del plan).
+ */
 export function clampEdit(a: Adjustment, value: number): number | undefined {
   if (!Number.isFinite(value)) return undefined;
-  return Math.min(a.max, Math.max(a.min, value));
+  const snapped = Math.round(Math.round(value / a.step) * a.step * 1e6) / 1e6;
+  return Math.min(a.max, Math.max(a.min, snapped));
 }
 
 function withEdit(row: PlanRow): Operation {

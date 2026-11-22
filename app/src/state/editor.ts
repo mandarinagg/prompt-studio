@@ -161,7 +161,12 @@ export function createEditorStore(api: EditorApi): StoreApi<EditorState> {
           requestAfter(longSide);
         }
       } catch (err) {
-        if (gen === draftGen && pgen === planGen) api.notify("error", `No se pudo mostrar el plan: ${tail(err)}`);
+        if (gen === draftGen && pgen === planGen && get().asset?.id === asset.id) {
+          // Un borrador viejo ya no coincide con las casillas: mejor ver la pila.
+          setPlan({ draft: null });
+          requestAfter(longSide);
+          api.notify("error", `No se pudo mostrar el plan: ${tail(err)}`);
+        }
       } finally {
         draftBusy = false;
         const queued = draftQueued;
@@ -201,7 +206,7 @@ export function createEditorStore(api: EditorApi): StoreApi<EditorState> {
         const s = await api.call("asset.state", { asset: asset.id });
         if (get().asset?.id !== asset.id) return;
         apply(s);
-        requestAfter();
+        refresh();
         requestBefore();
       } catch (err) {
         if (get().asset?.id === asset.id) set({ error: `No se pudo abrir la foto: ${tail(err)}` });
