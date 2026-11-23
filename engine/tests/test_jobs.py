@@ -1,3 +1,4 @@
+import math
 import threading
 import time
 from pathlib import Path
@@ -178,6 +179,16 @@ def test_cancel_mid_second_photo_keeps_first(tmp_path, q, rec, big, monkeypatch)
     assert third.path is None and third.error is None
     assert outputs(out) == [Path(first.path).name]  # ni la 2.ª ni su temporal
     assert [sha256_file(f) for f in files] == before
+
+
+def test_progress_events_per_photo_are_throttled(tmp_path, q, rec, big):
+    project, assets = setup(tmp_path, [big])
+    t0 = time.monotonic()
+    info = q.submit_export(assets, [Path(a.path) for a in assets], tmp_path / "out", "original")
+    rec.wait(info.id)
+    seconds = time.monotonic() - t0
+    n = sum(1 for name, i in rec.of(info.id) if name == "job.progress" and i.current == big.name)
+    assert n <= math.ceil(seconds / jobs.PROGRESS_INTERVAL) + 2, (n, seconds)
 
 
 def test_cancel_queued_job_never_runs(tmp_path, q, rec):

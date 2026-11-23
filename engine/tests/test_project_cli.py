@@ -1,4 +1,5 @@
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -161,6 +162,19 @@ def test_export_progress_per_photo_without_tty(tmp_path, capsys):
 
 
 def test_export_ctrl_c_cancels_and_leaves_no_temporaries(tmp_path, capsys, monkeypatch):
+    _ctrl_c_export(tmp_path, capsys, monkeypatch, tty=False)
+
+
+def test_export_ctrl_c_on_tty_ends_progress_line(tmp_path, capsys, monkeypatch):
+    err = _ctrl_c_export(tmp_path, capsys, monkeypatch, tty=True)
+    assert "\r[2/3] f1.jpg 0%" in err
+    # el mensaje de cancelación va en su propia línea, no pegado al progreso
+    assert "\ncancelado: " in err
+    assert "%cancelado" not in err
+
+
+def _ctrl_c_export(tmp_path, capsys, monkeypatch, *, tty):
+    import io
     import threading
 
     from pstudio.project import cli, export
@@ -172,6 +186,8 @@ def test_export_ctrl_c_cancels_and_leaves_no_temporaries(tmp_path, capsys, monke
 
     def fake(project, ids, out, preset, *, on_progress, cancel):
         def gated(i, total, asset_id, fraction):
+            if tty and i == 1 and fraction > 0:  # cancelada a mitad de foto: no llega al 100 %
+                return
             on_progress(i, total, asset_id, fraction)
             if i == 1 and fraction == 0.0:  # la segunda foto empieza: acá llega Ctrl+C
                 reached.set()
@@ -186,7 +202,17 @@ def test_export_ctrl_c_cancels_and_leaves_no_temporaries(tmp_path, capsys, monke
     monkeypatch.setattr(export, "export_assets", fake)
     monkeypatch.setattr(cli, "_wait", interrupted)
     out_dir = tmp_path / "out"
+    if tty:
+
+        class TtyErr(io.StringIO):
+            def isatty(self):
+                return True
+
+        fake_err = TtyErr()
+        monkeypatch.setattr(sys, "stderr", fake_err)
     code, out, err = run(["export", proj, "-o", str(out_dir)], capsys)
+    if tty:
+        err = fake_err.getvalue()
     assert code == 130
     # una foto tan chica puede terminar antes de ver la señal: lo firme es que no queden
     # temporales, que lo terminado se conserve y que el resto no se exporte
@@ -195,3 +221,4 @@ def test_export_ctrl_c_cancels_and_leaves_no_temporaries(tmp_path, capsys, monke
     assert f"cancelado: {len(kept)} exportadas, el resto no" in err
     assert all(n in out for n in kept)
     assert [sha256_file(f) for f in files] == before
+    return err

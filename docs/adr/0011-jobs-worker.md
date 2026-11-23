@@ -39,6 +39,11 @@ aparte (con prioridad normal, baja o en "modo segundo plano" de Windows).
   - `asset.export` se quita: `job.export` lo reemplaza.
 - Cerrar la sesión (fin de stdin) cancela lo encolado y lo que corre, y espera al worker hasta
   10 s.
+  Desde la app el límite efectivo es `shutdown()` en `app/src-tauri/src/engine.rs`: espera
+  ~500 ms (20 × 25 ms) a que el proceso salga y después lo mata. Alcanza: un temporal solo
+  existe una vez que empezó `write_to_file`; desde ahí el `eval` de libvips dispara
+  constantemente y el corte llega en ~15 ms. Antes de escribir (decodificar, hashear) todavía
+  no hay temporal que dejar.
 
 ## Mediciones
 2026-11-23, Ryzen 5 3600, fotos de `tests/fixtures/photos`. Preview de arrastre 1024 px

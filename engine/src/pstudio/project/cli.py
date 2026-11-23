@@ -1,7 +1,8 @@
 """`pstudio project …`: el proyecto desde la terminal (CLI-first, antes que la app).
 
 Códigos de salida: 0 bien; 1 entrada inválida (plan inválido, nada que deshacer); 2 error de
-archivo o de proyecto. Todo comando que cambia algo guarda al terminar.
+archivo o de proyecto; 130 export cancelado con Ctrl+C (gana sobre los fallos). Todo comando
+que cambia algo guarda al terminar.
 """
 
 from __future__ import annotations
@@ -246,11 +247,14 @@ def _export(args: argparse.Namespace) -> int:
     ids = args.assets or [a.id for a in project.assets]
     names = {a.id: Path(a.path).name for a in project.assets}
     tty = sys.stderr.isatty()
+    open_line = False  # en terminal, la última línea de progreso quedó sin salto de línea
 
     def on_progress(i: int, total: int, asset_id: str, fraction: float) -> None:
+        nonlocal open_line
         line = f"[{i + 1}/{total}] {names.get(asset_id, asset_id)} {int(fraction * 100)}%"
         if tty:
             end = "\n" if fraction >= 1 else ""
+            open_line = fraction < 1
             print(f"\r{line}", end=end, file=sys.stderr, flush=True)
         elif fraction >= 1:
             print(line, file=sys.stderr, flush=True)
@@ -280,6 +284,8 @@ def _export(args: argparse.Namespace) -> int:
     if "error" in box:
         raise box["error"]
     results = box["results"]
+    if open_line:  # cancelado a mitad de una foto: cerrar la línea de progreso
+        print(file=sys.stderr, flush=True)
     failed = 0
     done = 0
     for r in results:
