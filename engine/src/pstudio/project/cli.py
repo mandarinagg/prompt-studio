@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import threading
 from pathlib import Path
 
 from pstudio.schema.plan import ExportPreset
@@ -231,20 +232,68 @@ def _relink(args: argparse.Namespace) -> int:
     return 0
 
 
+def _wait(worker: threading.Thread) -> None:
+    """Espera al hilo en el hilo principal, con timeout, para que Ctrl+C llegue acá."""
+    while worker.is_alive():
+        worker.join(0.1)
+
+
 def _export(args: argparse.Namespace) -> int:
-    from pstudio.project.export import export_assets
+    from pstudio.project import export as project_export
     from pstudio.project.store import open_project
 
     project = open_project(Path(args.project))
     ids = args.assets or [a.id for a in project.assets]
-    results = export_assets(project, ids, Path(args.out), preset=args.preset)
+    names = {a.id: Path(a.path).name for a in project.assets}
+    tty = sys.stderr.isatty()
+
+    def on_progress(i: int, total: int, asset_id: str, fraction: float) -> None:
+        line = f"[{i + 1}/{total}] {names.get(asset_id, asset_id)} {int(fraction * 100)}%"
+        if tty:
+            end = "\n" if fraction >= 1 else ""
+            print(f"\r{line}", end=end, file=sys.stderr, flush=True)
+        elif fraction >= 1:
+            print(line, file=sys.stderr, flush=True)
+
+    cancel = threading.Event()
+    box: dict = {}
+
+    def work() -> None:
+        try:
+            box["results"] = project_export.export_assets(
+                project, ids, Path(args.out), args.preset, on_progress=on_progress, cancel=cancel
+            )
+        except BaseException as e:  # se re-lanza en el hilo principal
+            box["error"] = e
+
+    # El export corre en un hilo y el principal espera: Ctrl+C llega al principal, que activa
+    # `cancel` y deja que el export termine por su camino normal (sin temporales).
+    worker = threading.Thread(target=work, name="export")
+    worker.start()
+    interrupted = False
+    try:
+        _wait(worker)
+    except KeyboardInterrupt:
+        interrupted = True
+        cancel.set()
+        worker.join()
+    if "error" in box:
+        raise box["error"]
+    results = box["results"]
     failed = 0
+    done = 0
     for r in results:
+        if r.cancelled:
+            continue
         if r.error:
             failed += 1
             print(f"error: {r.error}", file=sys.stderr)
         else:
+            done += 1
             print(f"{r.dest}  ({r.seconds:.1f} s)")
+    if interrupted or any(r.cancelled for r in results):
+        print(f"cancelado: {done} exportadas, el resto no", file=sys.stderr)
+        return 130
     return 2 if failed else 0
 
 

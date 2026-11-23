@@ -140,3 +140,58 @@ def test_project_recent(tmp_path, capsys):
     assert lines[1] == f"A  {a.resolve()}"
     code, out, _ = run(["recent", "--json"], capsys)
     assert [i["name"] for i in json.loads(out)] == ["B", "A"]
+
+
+def _project_with(tmp_path, capsys, n):
+    files = [photo(tmp_path / "in" / f"f{i}.jpg", i) for i in range(n)]
+    run(["new", str(tmp_path), "P"], capsys)
+    proj = str(tmp_path / "P.pstudio")
+    run(["add", proj, *map(str, files)], capsys)
+    return proj, files
+
+
+def test_export_progress_per_photo_without_tty(tmp_path, capsys):
+    proj, _ = _project_with(tmp_path, capsys, 2)
+    code, out, err = run(["export", proj, "-o", str(tmp_path / "out")], capsys)
+    assert code == 0
+    assert "\r" not in err
+    lines = [ln for ln in err.splitlines() if ln.startswith("[")]
+    assert lines == ["[1/2] f0.jpg 100%", "[2/2] f1.jpg 100%"]
+    assert out.count("(") == 2  # stdout: una línea por foto terminada, como antes
+
+
+def test_export_ctrl_c_cancels_and_leaves_no_temporaries(tmp_path, capsys, monkeypatch):
+    import threading
+
+    from pstudio.project import cli, export
+
+    proj, files = _project_with(tmp_path, capsys, 3)
+    before = [sha256_file(f) for f in files]
+    real = export.export_assets
+    reached = threading.Event()
+
+    def fake(project, ids, out, preset, *, on_progress, cancel):
+        def gated(i, total, asset_id, fraction):
+            on_progress(i, total, asset_id, fraction)
+            if i == 1 and fraction == 0.0:  # la segunda foto empieza: acá llega Ctrl+C
+                reached.set()
+                assert cancel.wait(10)
+
+        return real(project, ids, out, preset, on_progress=gated, cancel=cancel)
+
+    def interrupted(worker):
+        assert reached.wait(10)
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(export, "export_assets", fake)
+    monkeypatch.setattr(cli, "_wait", interrupted)
+    out_dir = tmp_path / "out"
+    code, out, err = run(["export", proj, "-o", str(out_dir)], capsys)
+    assert code == 130
+    # una foto tan chica puede terminar antes de ver la señal: lo firme es que no queden
+    # temporales, que lo terminado se conserve y que el resto no se exporte
+    kept = sorted(p.name for p in out_dir.iterdir())
+    assert 1 <= len(kept) < 3 and all(".tmp" not in n for n in kept)
+    assert f"cancelado: {len(kept)} exportadas, el resto no" in err
+    assert all(n in out for n in kept)
+    assert [sha256_file(f) for f in files] == before
