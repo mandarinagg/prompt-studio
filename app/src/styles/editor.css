@@ -418,6 +418,20 @@ button.asset:disabled {
   color: var(--text-muted);
   font-size: var(--fs-xs);
 }
+.export-progress {
+  display: grid;
+  gap: var(--sp-2);
+}
+.export-progress-text {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.export-progress progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--accent);
+}
 .selectable {
   user-select: text;
   overflow-wrap: anywhere;
