@@ -34,3 +34,8 @@ def test_committed_rpc_schema_is_up_to_date():
     # y después `pnpm gen:types` en app/.
     assert REPO / "engine" / "schema" / "rpc-1.schema.json" == RPC_SCHEMA_FILE
     assert json.loads(RPC_SCHEMA_FILE.read_text(encoding="utf-8")) == rpc_json_schema()
+
+
+def test_contract_has_draft_and_export():
+    methods = rpc_json_schema()["properties"]["methods"]["properties"]
+    assert {"plan.draft", "asset.export"} <= set(methods)

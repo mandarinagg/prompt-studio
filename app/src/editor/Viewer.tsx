@@ -22,6 +22,8 @@ export function Viewer({ holdBefore, split }: ViewerProps) {
   const cropping = useEditor((s) => s.cropping);
   const error = useEditor((s) => s.error);
   const stats = useEditor((s) => s.stats);
+  // Hay borrador solo si el plan cambia algo visible (sin filas visibles se ve la pila).
+  const drafting = useEditor((s) => !!s.plan?.draft);
   const file = useEditor((s) => s.asset?.file ?? "");
   const ref = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState({ width: 0, height: 0 });
@@ -111,6 +113,11 @@ export function Viewer({ holdBefore, split }: ViewerProps) {
             </>
           )}
           {holdBefore && before && <span className="viewer-chip viewer-chip-left">Original</span>}
+          {drafting && !(holdBefore && before) && (
+            <span className="viewer-chip viewer-chip-plan" role="status">
+              Vista previa del plan — sin aplicar
+            </span>
+          )}
           {showCrop && <CropFrame width={after.width} height={after.height} />}
         </div>
       )}

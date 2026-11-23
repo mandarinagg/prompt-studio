@@ -249,6 +249,180 @@ button.asset:disabled {
   border-top: 1px solid var(--line);
 }
 
+/* ---- Pedido y plan (arriba del panel: el pedido es la puerta de entrada) ---- */
+.prompt {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  border-bottom: 1px solid var(--line);
+}
+.prompt-label {
+  margin-bottom: 0;
+}
+.prompt-input {
+  height: auto;
+  min-height: 56px;
+  padding: var(--sp-2) var(--sp-3);
+  resize: vertical;
+  font: inherit;
+  line-height: var(--lh);
+}
+.prompt-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+.chip-btn {
+  height: 28px;
+  padding: 0 var(--sp-3);
+  font-weight: 500;
+}
+.plan {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  border-bottom: 1px solid var(--line);
+}
+.plan .panel-title {
+  margin-bottom: 0;
+}
+.plan-explanation {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+.plan-rows,
+.plan-unsupported,
+.plan-messages {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.plan-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 32px;
+  font-size: var(--fs-sm);
+}
+.plan-row.is-off .plan-name {
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+.plan-check {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+.plan-name {
+  cursor: pointer;
+}
+.plan-num {
+  width: 72px;
+  height: 28px;
+  padding: 0 var(--sp-2);
+  font-size: var(--fs-sm);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.plan-result {
+  min-width: 56px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.plan-unsupported li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border: 1px solid var(--warn);
+  border-radius: var(--r-md);
+  color: var(--warn);
+  font-size: var(--fs-sm);
+}
+.plan-unsupported li span {
+  color: var(--text);
+}
+.plan-messages li {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+.plan-clarify {
+  display: grid;
+  gap: var(--sp-2);
+}
+.plan-question {
+  font-size: var(--fs-sm);
+}
+.plan-actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+.plan-thinking {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-2) var(--sp-4);
+  border-bottom: 1px solid var(--line);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+.viewer-chip-plan {
+  left: 50%;
+  top: auto;
+  bottom: var(--sp-2);
+  transform: translateX(-50%);
+  border: 1px solid var(--accent);
+  white-space: nowrap;
+}
+
+/* ---- Exportar ---- */
+.presets {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.presets legend {
+  margin-bottom: var(--sp-2);
+}
+.preset {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--raised);
+  cursor: pointer;
+}
+.preset.is-on {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+.preset input {
+  accent-color: var(--accent);
+}
+.preset-text {
+  display: grid;
+}
+.preset-title {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.preset-detail {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+.selectable {
+  user-select: text;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 1100px) {
   .editor-body {
     grid-template-columns: minmax(0, 1fr) 280px;

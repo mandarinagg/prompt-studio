@@ -24,6 +24,22 @@
           ],
           "additionalProperties": false
         },
+        "asset.export": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/ExportParams"
+            },
+            "result": {
+              "$ref": "#/$defs/Exported"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
         "asset.history": {
           "type": "object",
           "properties": {
@@ -216,6 +232,22 @@
           ],
           "additionalProperties": false
         },
+        "plan.draft": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/DraftParams"
+            },
+            "result": {
+              "$ref": "#/$defs/PlanDraft"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
         "preview.render": {
           "type": "object",
           "properties": {
@@ -379,6 +411,7 @@
       },
       "required": [
         "asset.apply_plan",
+        "asset.export",
         "asset.history",
         "asset.jump",
         "asset.redo",
@@ -391,6 +424,7 @@
         "image.info",
         "ping",
         "plan.create",
+        "plan.draft",
         "preview.render",
         "project.close",
         "project.create",
@@ -706,6 +740,35 @@
       "title": "Denoise",
       "type": "object"
     },
+    "DraftParams": {
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "title": "Asset",
+          "type": "string"
+        },
+        "plan": {
+          "$ref": "#/$defs/EditPlan"
+        },
+        "stack": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EditPlan"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "asset",
+        "plan"
+      ],
+      "title": "DraftParams",
+      "type": "object"
+    },
     "EditPlan": {
       "additionalProperties": false,
       "properties": {
@@ -989,6 +1052,69 @@
         }
       },
       "title": "Export",
+      "type": "object"
+    },
+    "ExportParams": {
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "title": "Asset",
+          "type": "string"
+        },
+        "preset": {
+          "default": "web",
+          "enum": [
+            "original",
+            "high_quality",
+            "web",
+            "catalog_square",
+            "social_vertical",
+            "story_9x16"
+          ],
+          "title": "Preset",
+          "type": "string"
+        },
+        "out_dir": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Out Dir"
+        }
+      },
+      "required": [
+        "asset"
+      ],
+      "title": "ExportParams",
+      "type": "object"
+    },
+    "Exported": {
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "out_dir": {
+          "title": "Out Dir",
+          "type": "string"
+        },
+        "ms": {
+          "title": "Ms",
+          "type": "number"
+        }
+      },
+      "required": [
+        "path",
+        "out_dir",
+        "ms"
+      ],
+      "title": "Exported",
       "type": "object"
     },
     "Exposure": {
@@ -1315,6 +1441,29 @@
         "export_hint"
       ],
       "title": "PlanCreated",
+      "type": "object"
+    },
+    "PlanDraft": {
+      "properties": {
+        "draft": {
+          "$ref": "#/$defs/EditPlan"
+        },
+        "export_hint": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Resize"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "draft",
+        "export_hint"
+      ],
+      "title": "PlanDraft",
       "type": "object"
     },
     "PlanParams": {
