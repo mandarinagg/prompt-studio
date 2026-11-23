@@ -1,5 +1,6 @@
 import io
 import json
+import threading
 import time
 from pathlib import Path
 
@@ -158,6 +159,124 @@ def test_thumbnail_missing_file_reports_error(rpc):
     ev = wait_event(rpc, "thumbnail.ready")
     assert ev["path"] is None and "falta el archivo f1.jpg" in ev["error"]
     rpc.files[1] = rpc.files[1].with_name("otra.jpg")
+
+
+def thumb_events(rpc, n, timeout=20.0):
+    """Los primeros `n` eventos `thumbnail.ready`, en orden."""
+    end = time.monotonic() + timeout
+    while time.monotonic() < end:
+        evs = [e["params"] for e in rpc.events() if e.get("method") == "thumbnail.ready"]
+        if len(evs) >= n:
+            return evs
+        time.sleep(0.02)
+    raise AssertionError(f"llegaron menos de {n} thumbnail.ready")
+
+
+def get_thumb(rpc, asset, n):
+    """Pide la miniatura y espera a que exista (el evento número `n` si hay que generarla)."""
+    path = rpc("thumbnail.get", asset=asset)["path"]
+    if path is None:
+        ev = thumb_events(rpc, n)[n - 1]
+        assert ev["asset"] == asset and ev["error"] is None, ev
+        path = ev["path"]
+    return Path(path)
+
+
+CROP_SQUARE = {"operations": [{"op": "crop", "aspect_ratio": "1:1"}]}
+BRIGHT = {"operations": [{"op": "exposure", "ev": 1}]}
+
+
+def test_stack_digest_is_stable_and_depends_on_operations():
+    from pstudio.rpc.media import stack_digest
+    from pstudio.schema import EditPlan
+
+    a = EditPlan.model_validate(BRIGHT)
+    assert stack_digest(EditPlan()) == "orig"
+    assert stack_digest(a) == stack_digest(EditPlan.model_validate(BRIGHT))
+    assert len(stack_digest(a)) == 12 and stack_digest(a) != stack_digest(
+        EditPlan.model_validate(CROP_SQUARE)
+    )
+    # lo que no cambia los píxeles no cambia la miniatura
+    noted = EditPlan.model_validate({**BRIGHT, "explanation": "más luz", "asset": "x"})
+    assert stack_digest(noted) == stack_digest(a)
+
+
+def test_thumbnail_depends_on_saved_stack_and_replaces_old(rpc):
+    first = get_thumb(rpc, rpc.ids[0], 1)
+    assert first.name.endswith("-orig.jpg")
+    rpc("asset.set_stack", asset=rpc.ids[0], stack=BRIGHT, label="luz")
+    second = get_thumb(rpc, rpc.ids[0], 2)
+    assert second != first and second.is_file()
+    assert not first.exists()  # la vieja se borra
+    assert mean(second) > mean(rpc.files[0]) + 10  # muestra la pila, no el original
+    # pedirla otra vez con la misma pila: la misma ruta, sin regenerar
+    assert rpc("thumbnail.get", asset=rpc.ids[0])["path"] == str(second)
+    # la miniatura de la otra foto no se toca
+    other = get_thumb(rpc, rpc.ids[1], 3)
+    rpc("asset.set_stack", asset=rpc.ids[0], stack=CROP_SQUARE, label="recorte")
+    get_thumb(rpc, rpc.ids[0], 4)
+    assert other.is_file()
+
+
+def test_thumbnail_crop_square(rpc):
+    rpc("asset.set_stack", asset=rpc.ids[0], stack=CROP_SQUARE, label="recorte")
+    img = pyvips.Image.new_from_file(str(get_thumb(rpc, rpc.ids[0], 1)))
+    assert img.width == img.height and img.width <= 320
+
+
+def test_thumbnail_of_large_photo_fits_and_keeps_crop(rpc, tmp_path):
+    big = photo(tmp_path / "in" / "big.jpg", 7, w=1600, h=1000)
+    asset = rpc("project.import", paths=[str(big)])["added"][0]["id"]
+    rpc("asset.set_stack", asset=asset, stack=CROP_SQUARE, label="recorte")
+    img = pyvips.Image.new_from_file(str(get_thumb(rpc, asset, 1)))
+    assert (img.width, img.height) == (320, 320)
+
+
+def test_thumbnail_empty_stack_keeps_fast_path(rpc, monkeypatch):
+    import pstudio.rpc.media as media
+
+    def boom(*a, **k):
+        raise AssertionError("sin pila no hace falta el proxy")
+
+    monkeypatch.setattr(media, "make_proxy", boom)
+    thumb = get_thumb(rpc, rpc.ids[0], 1)
+    img = pyvips.Image.new_from_file(str(thumb))
+    assert max(img.width, img.height) == 300  # la foto mide 300 px: no se agranda
+
+
+def test_thumbnail_missing_file_with_stack_reports_error(rpc):
+    rpc("asset.set_stack", asset=rpc.ids[1], stack=BRIGHT, label="luz")
+    rpc.files[1].rename(rpc.files[1].with_name("otra.jpg"))
+    rpc("thumbnail.get", asset=rpc.ids[1])
+    ev = thumb_events(rpc, 1)[0]
+    assert ev["path"] is None and "falta el archivo f1.jpg" in ev["error"]
+    rpc.files[1] = rpc.files[1].with_name("otra.jpg")
+
+
+def test_thumbnail_newer_stack_wins_over_pending(rpc, monkeypatch):
+    # Mientras se genera la de una pila vieja se pide la de la nueva: llega la nueva y la
+    # vieja no queda en disco ni se anuncia después.
+    import pstudio.rpc.media as media
+
+    gate = threading.Event()
+    real = media.Media._render_thumb
+
+    def slow(*args):
+        gate.wait(10)
+        return real(*args)
+
+    monkeypatch.setattr(media.Media, "_render_thumb", staticmethod(slow))
+    assert rpc("thumbnail.get", asset=rpc.ids[0])["path"] is None  # pila vacía, en curso
+    rpc("asset.set_stack", asset=rpc.ids[0], stack=BRIGHT, label="luz")
+    assert rpc("thumbnail.get", asset=rpc.ids[0])["path"] is None  # pila nueva: otra tarea
+    gate.set()
+    ev = thumb_events(rpc, 1)[0]
+    assert ev["error"] is None and not ev["path"].endswith("-orig.jpg")
+    time.sleep(0.3)
+    evs = thumb_events(rpc, 1)
+    assert len(evs) == 1, evs
+    thumbs = sorted(p.name for p in Path(ev["path"]).parent.glob("*.jpg"))
+    assert thumbs == [Path(ev["path"]).name]
 
 
 def test_plan_create_analyzes_the_proxy_not_the_original(rpc, monkeypatch):
