@@ -24,22 +24,6 @@
           ],
           "additionalProperties": false
         },
-        "asset.export": {
-          "type": "object",
-          "properties": {
-            "params": {
-              "$ref": "#/$defs/ExportParams"
-            },
-            "result": {
-              "$ref": "#/$defs/Exported"
-            }
-          },
-          "required": [
-            "params",
-            "result"
-          ],
-          "additionalProperties": false
-        },
         "asset.history": {
           "type": "object",
           "properties": {
@@ -192,6 +176,54 @@
             },
             "result": {
               "$ref": "#/$defs/ImageInfo"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "job.cancel": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/JobParams"
+            },
+            "result": {
+              "$ref": "#/$defs/JobInfo"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "job.export": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/JobExportParams"
+            },
+            "result": {
+              "$ref": "#/$defs/JobInfo"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "job.list": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/NoParams"
+            },
+            "result": {
+              "$ref": "#/$defs/JobList"
             }
           },
           "required": [
@@ -411,7 +443,6 @@
       },
       "required": [
         "asset.apply_plan",
-        "asset.export",
         "asset.history",
         "asset.jump",
         "asset.redo",
@@ -422,6 +453,9 @@
         "asset.undo_group",
         "engine.version",
         "image.info",
+        "job.cancel",
+        "job.export",
+        "job.list",
         "ping",
         "plan.create",
         "plan.draft",
@@ -442,11 +476,23 @@
       "title": "Events",
       "type": "object",
       "properties": {
+        "job.done": {
+          "$ref": "#/$defs/JobInfo"
+        },
+        "job.failed": {
+          "$ref": "#/$defs/JobInfo"
+        },
+        "job.progress": {
+          "$ref": "#/$defs/JobInfo"
+        },
         "thumbnail.ready": {
           "$ref": "#/$defs/ThumbnailReady"
         }
       },
       "required": [
+        "job.done",
+        "job.failed",
+        "job.progress",
         "thumbnail.ready"
       ],
       "additionalProperties": false
@@ -1054,69 +1100,6 @@
       "title": "Export",
       "type": "object"
     },
-    "ExportParams": {
-      "additionalProperties": false,
-      "properties": {
-        "asset": {
-          "title": "Asset",
-          "type": "string"
-        },
-        "preset": {
-          "default": "web",
-          "enum": [
-            "original",
-            "high_quality",
-            "web",
-            "catalog_square",
-            "social_vertical",
-            "story_9x16"
-          ],
-          "title": "Preset",
-          "type": "string"
-        },
-        "out_dir": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Out Dir"
-        }
-      },
-      "required": [
-        "asset"
-      ],
-      "title": "ExportParams",
-      "type": "object"
-    },
-    "Exported": {
-      "properties": {
-        "path": {
-          "title": "Path",
-          "type": "string"
-        },
-        "out_dir": {
-          "title": "Out Dir",
-          "type": "string"
-        },
-        "ms": {
-          "title": "Ms",
-          "type": "number"
-        }
-      },
-      "required": [
-        "path",
-        "out_dir",
-        "ms"
-      ],
-      "title": "Exported",
-      "type": "object"
-    },
     "Exposure": {
       "additionalProperties": false,
       "properties": {
@@ -1321,6 +1304,222 @@
         "unsupported"
       ],
       "title": "ImportResult",
+      "type": "object"
+    },
+    "JobExportParams": {
+      "additionalProperties": false,
+      "properties": {
+        "assets": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Assets",
+          "type": "array"
+        },
+        "preset": {
+          "default": "web",
+          "enum": [
+            "original",
+            "high_quality",
+            "web",
+            "catalog_square",
+            "social_vertical",
+            "story_9x16"
+          ],
+          "title": "Preset",
+          "type": "string"
+        },
+        "out_dir": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Out Dir"
+        }
+      },
+      "required": [
+        "assets"
+      ],
+      "title": "JobExportParams",
+      "type": "object"
+    },
+    "JobInfo": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "export",
+          "default": "export",
+          "title": "Kind",
+          "type": "string"
+        },
+        "status": {
+          "default": "queued",
+          "enum": [
+            "queued",
+            "running",
+            "done",
+            "failed",
+            "cancelled"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "done": {
+          "default": 0,
+          "title": "Done",
+          "type": "integer"
+        },
+        "current": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current"
+        },
+        "fraction": {
+          "default": 0.0,
+          "title": "Fraction",
+          "type": "number"
+        },
+        "out_dir": {
+          "title": "Out Dir",
+          "type": "string"
+        },
+        "results": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/JobItem"
+          },
+          "title": "Results",
+          "type": "array"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        },
+        "ms": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ms"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "status",
+        "total",
+        "done",
+        "current",
+        "fraction",
+        "out_dir",
+        "results",
+        "error",
+        "ms"
+      ],
+      "title": "JobInfo",
+      "type": "object"
+    },
+    "JobItem": {
+      "properties": {
+        "asset": {
+          "title": "Asset",
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        }
+      },
+      "required": [
+        "asset",
+        "path",
+        "error"
+      ],
+      "title": "JobItem",
+      "type": "object"
+    },
+    "JobList": {
+      "properties": {
+        "jobs": {
+          "items": {
+            "$ref": "#/$defs/JobInfo"
+          },
+          "title": "Jobs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "jobs"
+      ],
+      "title": "JobList",
+      "type": "object"
+    },
+    "JobParams": {
+      "additionalProperties": false,
+      "properties": {
+        "job": {
+          "title": "Job",
+          "type": "string"
+        }
+      },
+      "required": [
+        "job"
+      ],
+      "title": "JobParams",
       "type": "object"
     },
     "JumpParams": {

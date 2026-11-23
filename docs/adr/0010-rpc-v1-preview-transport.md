@@ -29,18 +29,19 @@ El diseño pide cuatro cosas:
 - **Métodos de v1:**
   - `project.create|open|info|import|relink`.
   - `asset.state|history|set_stack|apply_plan|undo|redo|jump|reset|undo_group`.
-  - `asset.export` (#59): export simple y síncrono de una foto a `Exportadas/` junto al
-    proyecto (o a `out_dir`), nunca sobrescribe. Bloquea el bucle RPC mientras dura; la cola
-    de jobs (#60) lo reemplaza.
+  - `job.export|cancel|list` (#60, ADR-0011): export de una foto o un lote en la cola de
+    trabajos, a `Exportadas/` junto al proyecto (o a `out_dir`), nunca sobrescribe. Reemplaza
+    al `asset.export` síncrono de #59, que bloqueaba el bucle RPC mientras duraba.
   - `plan.create`, con los proveedores `auto|rules|local_llm`. `cloud` queda afuera hasta que
     exista el consentimiento (#64).
   - `plan.draft` (#59): recalcula el borrador pila ⊕ plan cuando el usuario cambia casillas,
     valores o la pila. No guarda nada.
   - `preview.render` y `thumbnail.get`.
   - Además, `ping`, `engine.version` e `image.info`.
-- **Eventos:** son notificaciones JSON-RPC sin `id`, por ahora solo `thumbnail.ready`:
-  - todas las escrituras a stdout pasan por un lock, porque las miniaturas se generan en otro
-    hilo;
+- **Eventos:** son notificaciones JSON-RPC sin `id`: `thumbnail.ready` y
+  `job.progress|done|failed` (#60):
+  - todas las escrituras a stdout pasan por un lock, porque las miniaturas y los jobs corren en
+    otros hilos;
   - Rust las reenvía como el evento Tauri `engine-event {method, params}`.
 - **Engine caído:**
   - Las llamadas en curso fallan enseguida con "el motor se reinició", sin esperar al timeout.

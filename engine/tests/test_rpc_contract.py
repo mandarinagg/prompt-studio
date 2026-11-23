@@ -36,6 +36,10 @@ def test_committed_rpc_schema_is_up_to_date():
     assert json.loads(RPC_SCHEMA_FILE.read_text(encoding="utf-8")) == rpc_json_schema()
 
 
-def test_contract_has_draft_and_export():
-    methods = rpc_json_schema()["properties"]["methods"]["properties"]
-    assert {"plan.draft", "asset.export"} <= set(methods)
+def test_contract_has_draft_and_jobs():
+    s = rpc_json_schema()
+    methods = s["properties"]["methods"]["properties"]
+    assert {"plan.draft", "job.export", "job.cancel", "job.list"} <= set(methods)
+    assert "asset.export" not in methods
+    events = s["properties"]["events"]["properties"]
+    assert {"job.progress", "job.done", "job.failed"} <= set(events)

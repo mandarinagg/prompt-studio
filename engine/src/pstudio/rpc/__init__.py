@@ -17,7 +17,7 @@ from pstudio.rpc.server import (
 )
 
 # Registran sus métodos al importarse.
-from pstudio.rpc import methods_core, methods_media, methods_project  # noqa: E402, F401  isort: skip
+from pstudio.rpc import methods_core, methods_jobs, methods_media, methods_project  # noqa: E402, F401  isort: skip
 
 __all__ = [
     "ENGINE_ERROR",

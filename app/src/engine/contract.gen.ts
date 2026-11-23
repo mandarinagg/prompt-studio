@@ -12,10 +12,6 @@ export interface Methods {
     params: ApplyPlanParams;
     result: StackState;
   };
-  "asset.export": {
-    params: ExportParams;
-    result: Exported;
-  };
   "asset.history": {
     params: AssetParams;
     result: History;
@@ -55,6 +51,18 @@ export interface Methods {
   "image.info": {
     params: PathParams;
     result: ImageInfo;
+  };
+  "job.cancel": {
+    params: JobParams;
+    result: JobInfo;
+  };
+  "job.export": {
+    params: JobExportParams;
+    result: JobInfo;
+  };
+  "job.list": {
+    params: NoParams;
+    result: JobList;
   };
   ping: {
     params: NoParams;
@@ -304,17 +312,6 @@ export interface StackState {
   changed: boolean;
   export_hint: Resize | null;
 }
-export interface ExportParams {
-  asset: string;
-  preset?:
-    "original" | "high_quality" | "web" | "catalog_square" | "social_vertical" | "story_9x16";
-  out_dir?: string | null;
-}
-export interface Exported {
-  path: string;
-  out_dir: string;
-  ms: number;
-}
 export interface AssetParams {
   asset: string;
 }
@@ -358,6 +355,39 @@ export interface ImageInfo {
   height: number;
   bands: number;
   format: string;
+}
+export interface JobParams {
+  job: string;
+}
+export interface JobInfo {
+  id: string;
+  kind: "export";
+  status: "queued" | "running" | "done" | "failed" | "cancelled";
+  total: number;
+  done: number;
+  current: string | null;
+  fraction: number;
+  out_dir: string;
+  results: JobItem[];
+  error: string | null;
+  ms: number | null;
+}
+export interface JobItem {
+  asset: string;
+  path: string | null;
+  error: string | null;
+}
+export interface JobExportParams {
+  /**
+   * @minItems 1
+   */
+  assets: [string, ...string[]];
+  preset?:
+    "original" | "high_quality" | "web" | "catalog_square" | "social_vertical" | "story_9x16";
+  out_dir?: string | null;
+}
+export interface JobList {
+  jobs: JobInfo[];
 }
 export interface PlanParams {
   prompt: string;
@@ -450,6 +480,9 @@ export interface Thumbnail {
   path: string | null;
 }
 export interface Events {
+  "job.done": JobInfo;
+  "job.failed": JobInfo;
+  "job.progress": JobInfo;
   "thumbnail.ready": ThumbnailReady;
 }
 export interface ThumbnailReady {

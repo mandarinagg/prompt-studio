@@ -1,11 +1,11 @@
 import { useId, useState } from "react";
-import { call, type ExportParams } from "../engine/client";
+import { call, type JobExportParams, type JobInfo, onEngineEvent } from "../engine/client";
 import { appStore, useEditor } from "../state/store";
 import { Button } from "../ui/Button";
 import { Dialog } from "../ui/Dialog";
 import { resizeText } from "./PlanPanel";
 
-type Preset = NonNullable<ExportParams["preset"]>;
+type Preset = NonNullable<JobExportParams["preset"]>;
 
 /** Presets de docs/EXPORT_PRESETS.md con palabras de usuario (diseño §7). */
 export const PRESETS: { id: Preset; title: string; detail: string }[] = [
@@ -24,6 +24,33 @@ function fileName(path: string): string {
 function message(err: unknown): string {
   const m = (err instanceof Error ? err.message : String(err)).trim();
   return /[.!?]$/.test(m) ? m : `${m}.`;
+}
+
+/**
+ * Encola el export y espera su evento final (`job.done` / `job.failed`). Provisorio: Task 4 de
+ * #60 lo reemplaza por un store de trabajos con progreso. Escucha antes de encolar porque el
+ * evento final puede llegar antes que la respuesta de `job.export`.
+ */
+async function exportAndWait(params: JobExportParams): Promise<JobInfo> {
+  const finals = new Map<string, JobInfo>();
+  let jobId: string | null = null;
+  let settle: ((info: JobInfo) => void) | null = null;
+  const onFinal = (info: JobInfo) => {
+    if (jobId === null) finals.set(info.id, info);
+    else if (info.id === jobId) settle?.(info);
+  };
+  const unlisten = await Promise.all([onEngineEvent("job.done", onFinal), onEngineEvent("job.failed", onFinal)]);
+  try {
+    const finished = new Promise<JobInfo>((resolve) => {
+      settle = resolve;
+    });
+    const queued = await call("job.export", params);
+    jobId = queued.id;
+    const early = finals.get(queued.id);
+    return early ?? (await finished);
+  } finally {
+    for (const u of unlisten) u();
+  }
 }
 
 interface ExportDialogProps {
@@ -47,9 +74,12 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
     setBusy(true);
     setError(null);
     try {
-      const r = await call("asset.export", { asset: asset.id, preset });
-      setLast(r.path);
-      appStore.getState().notify("info", `Exportada: ${fileName(r.path)} (en ${r.out_dir})`);
+      const job = await exportAndWait({ assets: [asset.id], preset });
+      const item = job.results[0];
+      if (job.status === "cancelled") throw new Error("se canceló");
+      if (job.status === "failed" || !item?.path) throw new Error(job.error ?? item?.error ?? "no se pudo exportar");
+      setLast(item.path);
+      appStore.getState().notify("info", `Exportada: ${fileName(item.path)} (en ${job.out_dir})`);
       onOpenChange(false);
     } catch (err) {
       setError(`No se pudo exportar: ${message(err)}`);

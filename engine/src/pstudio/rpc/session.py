@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 
 from pstudio import recent
+from pstudio.jobs import JobQueue
 from pstudio.project.store import CACHE_DIR, PROJECT_FILE, open_project, save
 from pstudio.rpc.media import Media
 from pstudio.rpc.server import ENGINE_ERROR, NO_PROJECT, PROJECT_CHANGED, Notifier, RpcError
@@ -34,6 +35,8 @@ class Session:
         self.path: Path | None = None  # carpeta <Nombre>.pstudio
         self._stamp: tuple[int, int] | None = None
         self.media = Media(notifier)
+        # Los jobs trabajan sobre copias de las fotos: siguen aunque se cierre el proyecto.
+        self.jobs = JobQueue(notifier.emit if notifier is not None else None)
 
     # ------------------------------------------------------------------ proyecto
     def open(self, path: Path) -> Project:
@@ -98,4 +101,5 @@ class Session:
         self._stamp = _stamp(file)
 
     def close(self) -> None:
+        self.jobs.close()
         self.media.close()
