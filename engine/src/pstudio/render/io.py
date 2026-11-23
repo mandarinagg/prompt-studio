@@ -12,6 +12,11 @@ Conversión de color:
 Regla no negociable 2: **nunca escribir sobre originales.** `encode` se niega si el destino es
 el original o alguno de los protegidos, escribe primero un temporal y lo renombra al final, y
 verifica que el hash del original siga igual después de exportar.
+
+Cancelación (#60): con `monitor`, `encode` informa el avance de la escritura (0–1) y, si el
+monitor devuelve False, corta libvips (`set_kill`) y lanza `Cancelled`. El temporal se borra,
+así que de una escritura cancelada no queda nada. `Cancelled` vive acá (y no en
+`pstudio.jobs`, que la reexporta) para que `render` no dependa de la cola.
 """
 
 from __future__ import annotations
@@ -20,6 +25,7 @@ import hashlib
 import os
 import secrets
 import struct
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -43,6 +49,10 @@ class OriginalProtectedError(Exception):
 
 class OriginalModifiedError(Exception):
     """El hash del original cambió durante la operación (no debería pasar nunca)."""
+
+
+class Cancelled(Exception):
+    """Se canceló el export (el monitor de `encode` devolvió False)."""
 
 
 @dataclass(frozen=True)
@@ -209,10 +219,13 @@ def encode(
     depth: Literal[8, 16] = 8,
     metadata: Metadata = "keep",
     overwrite: bool = False,
+    monitor: Callable[[float], bool] | None = None,
 ) -> Path:
     """Guarda una imagen scRGB float en `dest` (formato según la extensión) y devuelve la ruta.
 
     `depth=16` solo aplica a PNG y TIFF. JPEG no tiene alpha: se aplana sobre blanco.
+    `monitor(fracción)` se llama durante la escritura; si devuelve False se cancela
+    (`Cancelled`, sin archivo).
     """
     dest = Path(dest).resolve()
     fmt = SUFFIXES.get(dest.suffix.lower())
@@ -257,11 +270,30 @@ def encode(
     else:
         options |= {"compression": "deflate", "predictor": "horizontal"}
 
+    killed = False
+    if monitor is not None:
+        # La señal va en la imagen final, la que recibe write_to_file.
+        def on_eval(image: pyvips.Image, progress) -> None:
+            nonlocal killed
+            if not killed and not monitor(progress.percent / 100):
+                killed = True
+                image.set_kill(True)
+
+        out = out.copy()  # no marcar imágenes que la caché de libvips puede reutilizar
+        out.set_progress(True)
+        out.signal_connect("eval", on_eval)
+
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_name(f".{dest.stem}.{secrets.token_hex(4)}.tmp{dest.suffix}")
     try:
         out.write_to_file(str(tmp), **options)
+        if killed:
+            raise Cancelled(f"se canceló el export de {dest.name}")
         os.replace(tmp, dest)
+    except pyvips.Error as e:
+        if killed:
+            raise Cancelled(f"se canceló el export de {dest.name}") from e
+        raise
     finally:
         tmp.unlink(missing_ok=True)
 

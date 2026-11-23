@@ -5,6 +5,7 @@ import { useStore } from "zustand";
 import { cacheImage, call } from "../engine/client";
 import { createAppStore, type AppState } from "./app";
 import { createEditorStore, type EditorState } from "./editor";
+import { createJobsStore, type JobsState } from "./jobs";
 
 export const appStore = createAppStore({
   call,
@@ -26,6 +27,15 @@ export const editorStore = createEditorStore({
 
 export function useEditor<T>(selector: (s: EditorState) => T): T {
   return useStore(editorStore, selector);
+}
+
+export const jobsStore = createJobsStore({
+  call,
+  notify: (kind, text) => appStore.getState().notify(kind, text),
+});
+
+export function useJobs<T>(selector: (s: JobsState) => T): T {
+  return useStore(jobsStore, selector);
 }
 
 // Si se cierra o se cambia de proyecto (p. ej. soltando otro .pstudio), el editor se cierra.

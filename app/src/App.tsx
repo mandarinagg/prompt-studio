@@ -3,13 +3,13 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useState } from "react";
 import { maybeRunBench } from "./dev/bench";
-import { onEngineFailed, onEngineRestarted } from "./engine/client";
+import { onEngineEvent, onEngineFailed, onEngineRestarted } from "./engine/client";
 import { classifyDrop, isProjectPath, projectFolder } from "./lib/paths";
 import { EditorScreen } from "./editor/EditorScreen";
 import { NewProjectDialog } from "./screens/NewProjectDialog";
 import { ProjectScreen } from "./screens/ProjectScreen";
 import { StartScreen } from "./screens/StartScreen";
-import { appStore, editorStore, useApp, useEditor } from "./state/store";
+import { appStore, editorStore, jobsStore, useApp, useEditor } from "./state/store";
 import { Icon } from "./ui/Icon";
 import { Toasts } from "./ui/Toasts";
 import { TooltipProvider } from "./ui/Tooltip";
@@ -65,12 +65,20 @@ export default function App() {
     // Primero se escucha al motor y después se arranca: boot consulta si ya había fallado.
     Promise.all([
       onEngineRestarted(async () => {
+        // Lo que esperaba o corría en el motor anterior no va a terminar (sus ids no vuelven).
+        jobsStore.getState().onEngineLost("el motor se reinició");
         await appStore.getState().onRestarted();
         // El proyecto se reabrió: el editor vuelve a pedir la pila y la preview.
         if (appStore.getState().project) await editorStore.getState().reload();
         else editorStore.getState().close();
       }),
-      onEngineFailed((m) => appStore.getState().onFailed(m)),
+      onEngineFailed((m) => {
+        jobsStore.getState().onEngineLost("el motor dejó de responder");
+        appStore.getState().onFailed(m);
+      }),
+      onEngineEvent("job.progress", (job) => jobsStore.getState().onEvent("job.progress", job)),
+      onEngineEvent("job.done", (job) => jobsStore.getState().onEvent("job.done", job)),
+      onEngineEvent("job.failed", (job) => jobsStore.getState().onEvent("job.failed", job)),
     ])
       .then(() => maybeRunBench())
       .then((bench) => {

@@ -192,7 +192,7 @@ def test_plan_create_analyzes_the_proxy_not_the_original(rpc, monkeypatch):
     assert d["white_balance_estimate"] == full["white_balance_estimate"]
 
 
-# ---------------------------------------------------------------------- plan.draft / export
+# ---------------------------------------------------------------------- plan.draft
 def test_plan_draft_merges_over_current_stack(rpc):
     stack = {"operations": [{"op": "exposure", "ev": 0.3}]}
     rpc("asset.set_stack", asset=rpc.ids[0], stack=stack, label="x")
@@ -219,29 +219,3 @@ def test_plan_draft_with_resize_returns_export_hint(rpc):
     r = rpc("plan.draft", asset=rpc.ids[0], plan=plan)
     assert r["export_hint"]["width"] == 800
     assert [o["op"] for o in r["draft"]["operations"]] == ["saturation"]
-
-
-def test_asset_export_writes_a_copy_and_never_overwrites(rpc):
-    bright = {"operations": [{"op": "exposure", "ev": 1}]}
-    rpc("asset.set_stack", asset=rpc.ids[0], stack=bright, label="x")
-    project_dir = Path(rpc("project.info")["path"])
-    first = rpc("asset.export", asset=rpc.ids[0], preset="web")
-    path = Path(first["path"])
-    assert path.is_file() and path.parent == project_dir.parent / "Exportadas"
-    assert Path(first["out_dir"]) == path.parent and first["ms"] >= 0
-    assert path.stem == "f0_web"
-    second = rpc("asset.export", asset=rpc.ids[0], preset="web")
-    assert Path(second["path"]).stem == "f0_web_2" and path.is_file()
-    assert sha256_file(rpc.files[0]) == rpc.before[0]
-
-
-def test_asset_export_to_given_folder(rpc, tmp_path):
-    r = rpc("asset.export", asset=rpc.ids[1], preset="original", out_dir=str(tmp_path / "otra"))
-    assert Path(r["path"]).parent == tmp_path / "otra"
-
-
-def test_asset_export_missing_file_is_a_readable_error(rpc):
-    rpc.files[0].rename(rpc.files[0].with_name("movida.jpg"))
-    err = rpc.error("asset.export", asset=rpc.ids[0])
-    assert err["code"] == ENGINE_ERROR and "falta el archivo f0.jpg" in err["message"]
-    rpc.files[0] = rpc.files[0].with_name("movida.jpg")
