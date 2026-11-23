@@ -1,4 +1,5 @@
 import threading
+import time
 from pathlib import Path
 
 import numpy as np
@@ -124,12 +125,14 @@ def test_encode_monitor_false_cancels_without_file(tmp_path, big):
 # ------------------------------------------------------------------ cola
 def test_batch_of_three_done_with_progress(tmp_path, q, rec):
     files = [photo(tmp_path / "in" / f"f{i}.jpg", seed=i) for i in range(3)]
+    before = [sha256_file(f) for f in files]
     project, assets = setup(tmp_path, files)
     out = tmp_path / "out"
     info = q.submit_export(assets, [Path(a.path) for a in assets], out, "original")
     assert info.status == "queued" and info.total == 3 and info.kind == "export"
 
     name, final = rec.wait(info.id)
+    assert [sha256_file(f) for f in files] == before
     assert name == "job.done" and final.status == "done"
     assert final.done == 3 and final.fraction == 1 and final.error is None
     assert final.ms is not None and final.out_dir == str(out)
@@ -200,8 +203,11 @@ def test_missing_photo_is_item_error(tmp_path, q, rec):
     files = [photo(tmp_path / "in" / f"f{i}.jpg", seed=i) for i in range(3)]
     project, assets = setup(tmp_path, files)
     files[1].unlink()
+    kept = [files[0], files[2]]
+    before = [sha256_file(f) for f in kept]
     info = q.submit_export(assets, [Path(a.path) for a in assets], tmp_path / "out", "web")
     name, final = rec.wait(info.id)
+    assert [sha256_file(f) for f in kept] == before
     assert name == "job.done" and final.status == "done" and final.done == 3
     ok1, missing, ok2 = final.results
     assert missing.path is None and "falta" in missing.error
@@ -219,25 +225,40 @@ def test_impossible_out_dir_fails(tmp_path, q, rec):
 
 def test_job_uses_stack_snapshot(tmp_path, q, rec):
     files = [photo(tmp_path / "in" / f"f{i}.jpg", seed=i) for i in range(2)]
+    before = [sha256_file(f) for f in files]
     project, assets = setup(tmp_path, files)
+    protected = [Path(a.path) for a in assets]
     released = gate(rec)
-    first = q.submit_export(assets[:1], [], tmp_path / "a", "original")
-    job = q.submit_export(assets[1:], [], tmp_path / "out", "original")
+    first = q.submit_export(assets[:1], protected, tmp_path / "a", "original")
+    job = q.submit_export(assets[1:], protected, tmp_path / "out", "original")
     # El usuario edita la foto mientras el job espera en la cola.
     push(assets[1], EditPlan.model_validate({"operations": [{"op": "exposure", "ev": 2}]}), "x")
     released.set()
     rec.wait(first.id)
     _, final = rec.wait(job.id)
+    assert [sha256_file(f) for f in files] == before
     exported = Path(final.results[0].path)
     assert abs(np.mean(pixels(exported)) - np.mean(pixels(files[1]))) < 3
 
 
-def test_close_cancels_running_job(tmp_path, rec, big):
+def test_close_cancels_running_job(tmp_path, rec, big, monkeypatch):
+    monkeypatch.setattr(jobs, "PROGRESS_INTERVAL", 0.0)
+    before = sha256_file(big)
     q = JobQueue(rec)
     project, assets = setup(tmp_path, [big])
     out = tmp_path / "out"
     started = threading.Event()
-    rec.hooks.append(lambda name, info: started.set())
+
+    def hook(name, info):
+        # A mitad de la foto: el worker espera acá hasta que close() empezó a cancelar, así
+        # la foto no puede terminar antes (close marca la cola cerrada y cancela de una vez).
+        if info.current == big.name and info.fraction > 0.1 and not started.is_set():
+            started.set()
+            deadline = time.monotonic() + TIMEOUT
+            while not q._closed and time.monotonic() < deadline:
+                time.sleep(0.001)
+
+    rec.hooks.append(hook)
     info = q.submit_export(assets, [big], out, "original")
     assert started.wait(TIMEOUT)
     q.close()
@@ -245,5 +266,6 @@ def test_close_cancels_running_job(tmp_path, rec, big):
     name, final = rec.wait(info.id)
     assert name == "job.done" and final.status == "cancelled"
     assert outputs(out) == []
+    assert sha256_file(big) == before
     with pytest.raises(RuntimeError):
         q.submit_export(assets, [big], out, "original")
