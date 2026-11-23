@@ -12,6 +12,7 @@ El preset sale de la CLI, si no del plan, y si no es `original`. Ver docs/EXPORT
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Literal
@@ -147,6 +148,7 @@ class Result:
     seconds: float = 0.0
     error: str | None = None
     settings: Settings | None = None
+    cancelled: bool = False  # no se exportó porque se canceló el lote (no es un error)
 
 
 def apply_file(
@@ -157,10 +159,12 @@ def apply_file(
     cli: Export | None = None,
     protected: tuple[Path, ...] = (),
     overwrite: bool = False,
+    monitor: Callable[[float], bool] | None = None,
 ) -> Result:
     """Decodifica `source`, aplica el plan, ajusta al preset y guarda la copia en `dest`.
 
-    La extensión de `dest` se reemplaza por la del formato resuelto.
+    La extensión de `dest` se reemplaza por la del formato resuelto. `monitor` pasa a `encode`
+    (avance 0–1; si devuelve False se lanza `Cancelled` y no queda archivo).
     """
     start = time.perf_counter()
     img, info = decode(source)
@@ -179,6 +183,7 @@ def apply_file(
         depth=settings.depth,
         metadata=settings.metadata,
         overwrite=overwrite,
+        monitor=monitor,
     )
     return Result(source, final, time.perf_counter() - start, settings=settings)
 
