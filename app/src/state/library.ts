@@ -111,10 +111,6 @@ export interface LibraryState extends Selection {
   reset(opts?: { sameProject?: boolean }): void;
 }
 
-function messageOf(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
-
 /** En qué anda el pedido de una foto (fuera del estado: no hace falta redibujar por esto). */
 type Phase = "queued" | "running" | "waiting";
 
@@ -178,12 +174,14 @@ export function createLibraryStore(api: LibraryApi): StoreApi<LibraryState> {
       heard.delete(id);
       let path: string | null = null;
       let url: string | null = null;
-      let error: string | null = null;
+      let failed = false;
       try {
         path = (await api.call("thumbnail.get", { asset: id })).path;
         if (path !== null && gen === generation && get().thumbs[id]?.key === key) url = await api.cacheImage(path);
-      } catch (err) {
-        error = messageOf(err);
+      } catch {
+        // Transporte/RPC o lectura de la caché (motor caído o reiniciado): se reintenta en el
+        // próximo `want`, no solo.
+        failed = true;
       }
       if (gen !== generation) {
         if (url) api.revoke(url); // de un proyecto (o motor) anterior
@@ -200,9 +198,9 @@ export function createLibraryStore(api: LibraryApi): StoreApi<LibraryState> {
         if (url) api.revoke(url);
         phase.delete(id);
         enqueue(id);
-      } else if (error !== null) {
+      } else if (failed) {
         phase.delete(id);
-        patch(id, { key: current.key, url: current.url, status: "error", error });
+        patch(id, { key: current.key, url: current.url, status: "idle" });
       } else if (url !== null) {
         phase.delete(id);
         if (current.url) api.revoke(current.url);
@@ -273,7 +271,11 @@ export function createLibraryStore(api: LibraryApi): StoreApi<LibraryState> {
         for (const id of [...ids].reverse()) {
           if (!assets.has(id)) continue;
           const t = get().thumbs[id];
-          if (t && t.key === keyOf(id) && t.status !== "idle") continue;
+          if (t && t.key === keyOf(id) && t.status !== "idle") {
+            // Ya pedida: si sigue en la fila (no en vuelo), pasa al frente.
+            if (phase.get(id) === "queued") queue = [id, ...queue.filter((x) => x !== id)];
+            continue;
+          }
           request(id);
         }
         pump();

@@ -220,7 +220,7 @@ describe("store de la biblioteca: miniaturas", () => {
     expect(t.gets.map((g) => g.asset)).toEqual(["a"]);
   });
 
-  it("si thumbnail.get o la lectura fallan, queda en error con el mensaje", async () => {
+  it("si thumbnail.get o la lectura fallan (motor caído o reiniciado), vuelve a idle sin insistir solo", async () => {
     const t = setup();
     t.s().want(["a", "b"]);
     await settle();
@@ -228,8 +228,30 @@ describe("store de la biblioteca: miniaturas", () => {
     await t.answer("b", "C:/p/cache/thumbs/b.jpg");
     t.loads.shift()!.d.reject(new EngineError("no está en la caché", null));
     await settle();
-    expect(t.s().thumbs.a).toMatchObject({ status: "error", error: "no hay un proyecto abierto" });
-    expect(t.s().thumbs.b).toMatchObject({ status: "error", error: "no está en la caché" });
+    expect(t.s().thumbs.a).toMatchObject({ status: "idle" });
+    expect(t.s().thumbs.b).toMatchObject({ status: "idle" });
+    expect(t.gets).toEqual([]); // no hay reintento en caliente
+    t.s().want(["a"]);
+    await settle();
+    expect(t.gets.map((g) => g.asset)).toEqual(["a"]);
+  });
+
+  it("tras un reinicio del motor: el primer get falla, el siguiente want lo recupera", async () => {
+    const t = setup();
+    t.s().want(["a"]);
+    await settle();
+    t.s().reset({ sameProject: true });
+    t.s().want(["a"]); // el proyecto todavía no se reabrió en el motor nuevo
+    await settle();
+    t.gets.shift(); // el pedido del motor anterior nunca contesta
+    t.gets.shift()!.d.reject(new EngineError("no hay un proyecto abierto", -32001));
+    await settle();
+    expect(t.s().thumbs.a.status).toBe("idle");
+    t.s().want(["a"]);
+    await settle();
+    await t.answer("a", "C:/p/cache/thumbs/a.jpg");
+    await t.load("C:/p/cache/thumbs/a.jpg");
+    expect(t.s().thumbs.a).toMatchObject({ status: "ready", url: "blob:C:/p/cache/thumbs/a.jpg" });
   });
 
   it("un aviso de una foto que no se pidió (u otro proyecto) se ignora y no lee nada", async () => {
@@ -365,5 +387,20 @@ describe("store de la biblioteca: miniaturas", () => {
     await t.answer("f1", null);
     expect(t.gets.map((g) => g.asset).at(-1)).toBe("f16");
     expect(t.gets).toHaveLength(MAX_IN_FLIGHT);
+  });
+
+  it("want mueve al frente las ya encoladas (en el orden pedido) sin duplicarlas", async () => {
+    const ids = Array.from({ length: 10 }, (_, i) => `f${i}`);
+    const t = setup(ids);
+    t.s().want(ids);
+    await settle();
+    expect(t.gets).toHaveLength(MAX_IN_FLIGHT);
+    t.s().want(["f7", "f8"]);
+    await t.answer("f0", null);
+    expect(t.gets.map((g) => g.asset).at(-1)).toBe("f7");
+    await t.answer("f1", null);
+    expect(t.gets.map((g) => g.asset).at(-1)).toBe("f8");
+    expect(t.gets).toHaveLength(MAX_IN_FLIGHT);
+    expect(t.gets.map((g) => g.asset).filter((x) => x === "f7")).toHaveLength(1);
   });
 });

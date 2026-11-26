@@ -67,9 +67,10 @@ export default function App() {
       onEngineRestarted(async () => {
         // Lo que esperaba o corría en el motor anterior no va a terminar (sus ids no vuelven).
         jobsStore.getState().onEngineLost("el motor se reinició");
-        // Las miniaturas pedidas al motor anterior no van a llegar: se vuelven a pedir.
-        libraryStore.getState().reset({ sameProject: true });
         await appStore.getState().onRestarted();
+        // Las miniaturas pedidas al motor anterior no van a llegar: se vuelven a pedir, pero
+        // recién con el proyecto reabierto (si no, el motor nuevo contesta "no hay proyecto").
+        libraryStore.getState().reset({ sameProject: true });
         // El proyecto se reabrió: el editor vuelve a pedir la pila y la preview.
         if (appStore.getState().project) await editorStore.getState().reload();
         else editorStore.getState().close();
