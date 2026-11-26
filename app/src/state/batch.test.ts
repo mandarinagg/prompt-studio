@@ -330,4 +330,58 @@ describe("copiar, pegar y deshacer el lote", () => {
     expect(f.calls).toEqual([]);
     expect(f.notes).toEqual([]);
   });
+
+  it("undoLast with nothing undone reports why, without saying 0 fotos", async () => {
+    const f = fake({
+      "asset.state": () => ({ ...state("a1", false), stack: STACK_A }),
+      "asset.paste": () => ({ group_id: "gp", states: [state("a2", true)] }),
+      "asset.undo_group": () => ({ undone: [], skipped: ["a2", "a3"] }),
+    });
+    const store = createBatchStore(f.api);
+    store.getState().copyStack(STACK_A, "a1.jpg");
+    await store.getState().paste(["a2"], false);
+    await store.getState().undoLast();
+    expect(f.notes).toContainEqual(["info", "No se deshizo «Ajustes pegados»: 2 cambiaron después"]);
+  });
+
+  it("undoLast with nothing undone nor skipped says there is nothing to undo", async () => {
+    const f = fake({
+      "asset.state": () => ({ ...state("a1", false), stack: STACK_A }),
+      "asset.paste": () => ({ group_id: "gp", states: [state("a2", true)] }),
+      "asset.undo_group": () => ({ undone: [], skipped: [] }),
+    });
+    const store = createBatchStore(f.api);
+    store.getState().copyStack(STACK_A, "a1.jpg");
+    await store.getState().paste(["a2"], false);
+    await store.getState().undoLast();
+    expect(f.notes).toContainEqual(["info", "No hay nada para deshacer"]);
+  });
+
+  it("a second apply/paste/undo makes no engine call while refreshProject is pending", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const f = fake({
+      ...planHandlers(),
+      "asset.apply_plan_many": () => ({ group_id: "g1", states: [state("a1", true)] }),
+      "asset.paste": () => ({ group_id: "gp", states: [state("a2", true)] }),
+      "asset.undo_group": () => ({ undone: ["a1"], skipped: [] }),
+    });
+    f.api.refreshProject = () => gate;
+    const store = createBatchStore(f.api);
+    store.getState().start(["a1"], ASSETS);
+    store.getState().copyStack(STACK_A, "a1.jpg");
+    await store.getState().ask("más luz");
+    const first = store.getState().apply();
+    await settle();
+    expect(store.getState().applying).toBe(true);
+    expect(store.getState().plan).toBeNull();
+    expect(await store.getState().apply()).toBe(false);
+    expect(await store.getState().paste(["a2"], false)).toBe(false);
+    await store.getState().undoLast();
+    release();
+    expect(await first).toBe(true);
+    expect(store.getState().applying).toBe(false);
+    expect(f.calls.filter((c) => c.method === "asset.apply_plan_many")).toHaveLength(1);
+    expect(f.calls.some((c) => c.method === "asset.paste" || c.method === "asset.undo_group")).toBe(false);
+  });
 });

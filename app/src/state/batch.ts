@@ -142,26 +142,30 @@ export function createBatchStore(api: BatchApi): StoreApi<BatchState> {
             label,
           });
         } catch (err) {
-          api.notify("error", `No se pudo aplicar: ${tail(err)}`);
-          return false;
-        } finally {
           busy = false;
           set({ applying: false });
+          api.notify("error", `No se pudo aplicar: ${tail(err)}`);
+          return false;
         }
         // El motor ya guardó: un fallo de la interfaz de acá en adelante no es "no se pudo aplicar".
-        const changed = r.states.filter((s) => s.changed);
-        for (const s of changed) api.onStackChanged(s.asset);
-        if (r.group_id) {
-          set({ lastGroup: { id: r.group_id, label, count: changed.length } });
-          api.notify("info", `Pedido aplicado a ${photos(targets.length)}`);
-          await api.refreshProject().catch(() => {});
-        } else {
-          api.notify("info", "No hubo cambios en las fotos");
-        }
-        // Si mientras se aplicaba se canceló o se empezó otro, ese estado no se pisa.
+        // El plan se cierra antes de esperar al proyecto, y el bloqueo sigue hasta el final.
         if (mine === gen) {
           gen++;
           set({ plan: null });
+        }
+        try {
+          const changed = r.states.filter((s) => s.changed);
+          for (const s of changed) api.onStackChanged(s.asset);
+          if (r.group_id) {
+            set({ lastGroup: { id: r.group_id, label, count: changed.length } });
+            api.notify("info", `Pedido aplicado a ${photos(targets.length)}`);
+            await api.refreshProject().catch(() => {});
+          } else {
+            api.notify("info", "No hubo cambios en las fotos");
+          }
+        } finally {
+          busy = false;
+          set({ applying: false });
         }
         return true;
       },
@@ -185,50 +189,63 @@ export function createBatchStore(api: BatchApi): StoreApi<BatchState> {
         const clipboard = get().clipboard;
         if (!clipboard || targets.length === 0 || busy) return false;
         busy = true;
-        let r;
         try {
-          r = await api.call("asset.paste", {
-            assets: targets as [string, ...string[]],
-            stack: clipboard.stack,
-            geometry,
-          });
-        } catch (err) {
-          api.notify("error", `No se pudo pegar: ${tail(err)}`);
-          return false;
+          let r;
+          try {
+            r = await api.call("asset.paste", {
+              assets: targets as [string, ...string[]],
+              stack: clipboard.stack,
+              geometry,
+            });
+          } catch (err) {
+            api.notify("error", `No se pudo pegar: ${tail(err)}`);
+            return false;
+          }
+          const changed = r.states.filter((s) => s.changed);
+          for (const s of changed) api.onStackChanged(s.asset);
+          if (r.group_id) {
+            set({ lastGroup: { id: r.group_id, label: "Ajustes pegados", count: changed.length } });
+            api.notify("info", `Ajustes pegados en ${photos(changed.length)}`);
+            await api.refreshProject().catch(() => {});
+          } else {
+            api.notify("info", "No hubo cambios en las fotos");
+          }
+          return true;
         } finally {
           busy = false;
         }
-        const changed = r.states.filter((s) => s.changed);
-        for (const s of changed) api.onStackChanged(s.asset);
-        if (r.group_id) {
-          set({ lastGroup: { id: r.group_id, label: "Ajustes pegados", count: changed.length } });
-          api.notify("info", `Ajustes pegados en ${photos(changed.length)}`);
-          await api.refreshProject().catch(() => {});
-        } else {
-          api.notify("info", "No hubo cambios en las fotos");
-        }
-        return true;
       },
 
       async undoLast() {
         const group = get().lastGroup;
         if (!group || busy) return;
         busy = true;
-        let r;
         try {
-          r = await api.call("asset.undo_group", { group_id: group.id });
-        } catch (err) {
-          api.notify("error", `No se pudo deshacer: ${tail(err)}`);
-          return;
+          let r;
+          try {
+            r = await api.call("asset.undo_group", { group_id: group.id });
+          } catch (err) {
+            api.notify("error", `No se pudo deshacer: ${tail(err)}`);
+            return;
+          }
+          set({ lastGroup: null });
+          for (const id of r.undone) api.onStackChanged(id);
+          const n = r.skipped.length;
+          if (r.undone.length === 0) {
+            api.notify(
+              "info",
+              n === 0
+                ? "No hay nada para deshacer"
+                : `No se deshizo «${group.label}»: ${n === 1 ? "1 cambió después" : `${n} cambiaron después`}`,
+            );
+          } else {
+            const skipped = n === 0 ? "" : n === 1 ? ". 1 cambió después y quedó como estaba" : `. ${n} cambiaron después y quedaron como estaban`;
+            api.notify("info", `Se deshizo «${group.label}» en ${photos(r.undone.length)}${skipped}`);
+          }
+          await api.refreshProject().catch(() => {});
         } finally {
           busy = false;
         }
-        set({ lastGroup: null });
-        for (const id of r.undone) api.onStackChanged(id);
-        const n = r.skipped.length;
-        const skipped = n === 0 ? "" : n === 1 ? ". 1 cambió después y quedó como estaba" : `. ${n} cambiaron después y quedaron como estaban`;
-        api.notify("info", `Se deshizo «${group.label}» en ${photos(r.undone.length)}${skipped}`);
-        await api.refreshProject().catch(() => {});
       },
 
       cancel() {
