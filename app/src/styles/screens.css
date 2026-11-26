@@ -383,7 +383,7 @@
   position: fixed;
   right: var(--sp-4);
   bottom: var(--sp-4);
-  /* Sin z-index propio: los avisos quedan por encima de los diálogos y la cola por debajo. */
+  z-index: 30; /* los avisos quedan por encima de los diálogos (la cola también; ver #62) */
   display: grid;
   gap: var(--sp-2);
   width: min(380px, calc(100vw - 32px));
@@ -396,8 +396,6 @@
 }
 /* El botón va primero en el DOM (orden de Tab) pero el panel se ve arriba de él. */
 .queue {
-  position: relative;
-  z-index: 19; /* debajo de .dialog-overlay (20): un diálogo abierto tapa la cola */
   display: flex;
   flex-direction: column-reverse;
   gap: var(--sp-2);
