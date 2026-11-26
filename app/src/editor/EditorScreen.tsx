@@ -6,6 +6,7 @@ import { Icon } from "../ui/Icon";
 import { Tooltip } from "../ui/Tooltip";
 import { AdjustPanel } from "./AdjustPanel";
 import { ExportDialog } from "./ExportDialog";
+import { Filmstrip } from "./Filmstrip";
 import { PlanPanel } from "./PlanPanel";
 import { focusPrompt, PromptBox } from "./PromptBox";
 import { Viewer } from "./Viewer";
@@ -191,6 +192,7 @@ export function EditorScreen() {
           <AdjustPanel />
         </aside>
       </div>
+      <Filmstrip />
     </div>
   );
 }

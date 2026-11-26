@@ -6,6 +6,7 @@ import { cacheImage, call } from "../engine/client";
 import { createAppStore, type AppState } from "./app";
 import { createEditorStore, type EditorState } from "./editor";
 import { createJobsStore, type JobsState } from "./jobs";
+import { createLibraryStore, type LibraryState } from "./library";
 
 export const appStore = createAppStore({
   call,
@@ -23,6 +24,8 @@ export const editorStore = createEditorStore({
   revoke: (url) => URL.revokeObjectURL(url),
   notify: (kind, text) => appStore.getState().notify(kind, text),
   pixelRatio: () => window.devicePixelRatio || 1,
+  // Declarado más abajo: se llama mucho después de crearse los dos stores.
+  onStackChanged: (id) => libraryStore.getState().invalidate(id),
 });
 
 export function useEditor<T>(selector: (s: EditorState) => T): T {
@@ -37,6 +40,24 @@ export const jobsStore = createJobsStore({
 export function useJobs<T>(selector: (s: JobsState) => T): T {
   return useStore(jobsStore, selector);
 }
+
+export const libraryStore = createLibraryStore({
+  call,
+  cacheImage,
+  revoke: (url) => URL.revokeObjectURL(url),
+});
+
+export function useLibrary<T>(selector: (s: LibraryState) => T): T {
+  return useStore(libraryStore, selector);
+}
+
+// La biblioteca sigue las fotos del proyecto abierto. Al cerrar o cambiar de proyecto suelta la
+// selección y las miniaturas (los avisos del proyecto anterior que lleguen después se ignoran).
+appStore.subscribe((s, prev) => {
+  if (s.project === prev.project) return;
+  if (s.project?.path !== prev.project?.path) libraryStore.getState().reset();
+  libraryStore.getState().sync(s.project?.assets ?? []);
+});
 
 // Si se cierra o se cambia de proyecto (p. ej. soltando otro .pstudio), el editor se cierra.
 appStore.subscribe((s, prev) => {
