@@ -4,7 +4,7 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 import type { AssetSummary, call as engineCall, EditPlan, Resize, StackState } from "../engine/client";
 import { findOp, normalize, withoutCrop } from "../lib/stack";
-import { clampEdit, effectivePlan, hasIncluded, rowAdjustment, rowsOf, visibleOps, type PlanState } from "./draft";
+import { editRowIn, effectivePlan, hasIncluded, rowsOf, toggleRowIn, visibleOps, type PlanState } from "./draft";
 import { createPreviewLoop, type PreviewJob, type PreviewResult } from "./preview";
 
 export interface EditorApi {
@@ -375,17 +375,16 @@ export function createEditorStore(api: EditorApi): StoreApi<EditorState> {
       toggleRow(index) {
         const plan = get().plan;
         if (!plan || plan.status !== "ready") return;
-        setPlan({ rows: plan.rows.map((r) => (r.index === index ? { ...r, included: !r.included } : r)) });
+        set({ plan: toggleRowIn(plan, index) });
         refresh();
       },
 
       editRow(index, value) {
         const plan = get().plan;
-        const row = plan?.rows.find((r) => r.index === index);
-        const a = row && rowAdjustment(row.op);
-        if (!plan || plan.status !== "ready" || !row || !a) return;
-        const edited = clampEdit(a, value);
-        setPlan({ rows: plan.rows.map((r) => (r.index === index ? { ...r, edited } : r)) });
+        if (!plan || plan.status !== "ready") return;
+        const next = editRowIn(plan, index, value);
+        if (next === plan) return;
+        set({ plan: next });
         refresh();
       },
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { EditPlan, PlanCreated } from "../engine/client";
-import { clampEdit, effectivePlan, hasIncluded, rowAdjustment, rowsOf, visibleOps, type PlanState } from "./draft";
+import { clampEdit, editRowIn, effectivePlan, hasIncluded, rowAdjustment, rowsOf, toggleRowIn, visibleOps, type PlanState } from "./draft";
 
 const plan: EditPlan = {
   source_prompt: "más luz",
@@ -89,5 +89,26 @@ describe("borrador del plan", () => {
     expect(hasIncluded(resizeOnly)).toBe(true); // aplicarlo deja la sugerencia de export
     expect(visibleOps(resizeOnly)).toBe(false); // pero en la foto no cambia nada
     expect(visibleOps(ready(plan))).toBe(true);
+  });
+});
+
+describe("toggleRowIn / editRowIn", () => {
+  it("toggleRowIn alterna una fila y no toca un plan que no está listo", () => {
+    const p = ready(plan);
+    const off = toggleRowIn(p, 1);
+    expect(off.rows.map((r) => r.included)).toEqual([true, false, true, true]);
+    expect(toggleRowIn(off, 1).rows[1].included).toBe(true);
+    const thinking: PlanState = { ...p, status: "thinking" };
+    expect(toggleRowIn(thinking, 1)).toBe(thinking);
+  });
+
+  it("editRowIn recorta al rango, NaN vuelve al valor del plan y las filas sin slider no cambian", () => {
+    const p = ready(plan);
+    expect(editRowIn(p, 0, 9).rows[0].edited).toBe(5);
+    expect(editRowIn(editRowIn(p, 0, 2), 0, Number.NaN).rows[0].edited).toBeUndefined();
+    expect(editRowIn(p, 3, 5)).toBe(p); // resize: sin slider
+    expect(editRowIn(p, 42, 1)).toBe(p);
+    const thinking: PlanState = { ...p, status: "thinking" };
+    expect(editRowIn(thinking, 0, 1)).toBe(thinking);
   });
 });

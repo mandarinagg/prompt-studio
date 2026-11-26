@@ -2,8 +2,9 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useState } from "react";
 import { ExportDialog } from "../export/ExportDialog";
 import { isExportShortcut } from "../lib/keys";
+import { BatchPromptDialog } from "../library/BatchPromptDialog";
 import { IMAGE_FILTER, LibraryGrid } from "../library/LibraryGrid";
-import { useApp, useLibrary } from "../state/store";
+import { batchStore, useApp, useLibrary } from "../state/store";
 import { Button, IconButton } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 
@@ -17,11 +18,20 @@ export function ProjectScreen({ dragging }: { dragging: boolean }) {
   const missing = project.assets.filter((a) => a.missing).length;
   const selected = useLibrary((s) => s.selected);
   const [exporting, setExporting] = useState(false);
+  const [batching, setBatching] = useState(false);
   // Las seleccionadas en el orden de la cuadrícula (así se exportan).
   const toExport = useMemo(() => {
     const ids = new Set(selected);
     return project.assets.filter((a) => ids.has(a.id));
   }, [project.assets, selected]);
+
+  const startBatch = () => {
+    batchStore.getState().start(
+      toExport.map((a) => a.id),
+      project.assets,
+    );
+    setBatching(true);
+  };
 
   // Ctrl+E: exportar la selección (con un diálogo abierto, el diálogo manda).
   useEffect(() => {
@@ -73,6 +83,7 @@ export function ProjectScreen({ dragging }: { dragging: boolean }) {
         </Button>
       </header>
       <ExportDialog open={exporting} onOpenChange={setExporting} assets={toExport} />
+      <BatchPromptDialog open={batching} onOpenChange={setBatching} />
 
       <main className={`project-body ${dragging ? "is-dragging" : ""}`} data-main tabIndex={-1}>
         {count === 0 ? (
@@ -85,7 +96,7 @@ export function ProjectScreen({ dragging }: { dragging: boolean }) {
             </Button>
           </div>
         ) : (
-          <LibraryGrid onExport={() => setExporting(true)} />
+          <LibraryGrid onExport={() => setExporting(true)} onBatch={startBatch} />
         )}
         {dragging && <p className="drop-hint">Soltalas para agregarlas a {project.name}</p>}
       </main>
