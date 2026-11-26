@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { call } from "../engine/client";
 import { moveFocusIndex } from "../state/library";
 import { appStore, editorStore, libraryStore, useApp, useLibrary } from "../state/store";
@@ -51,6 +51,20 @@ export function LibraryGrid() {
     root: (grid) => grid.closest(".project-body"),
     rootMargin: `${window.innerHeight}px 0px`,
   });
+
+  // Al volver del editor el foco está en <body>: se lo devolvemos a la foto con foco (solo al montar).
+  useEffect(() => {
+    const id = libraryStore.getState().focus;
+    const active = document.activeElement;
+    if (id === null || !ids.includes(id) || (active && active !== document.body)) return;
+    gridRef.current
+      ?.querySelector<HTMLElement>(`[data-asset="${CSS.escape(id)}"]`)
+      ?.focus({ preventScroll: true });
+    gridRef.current
+      ?.querySelector<HTMLElement>(`[data-asset="${CSS.escape(id)}"]`)
+      ?.scrollIntoView?.({ block: "nearest" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openAsset = useCallback(
     (id: string) => {

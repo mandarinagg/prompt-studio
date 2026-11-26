@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { editorStore, useApp, useEditor, useLibrary } from "../state/store";
 import { useLazyThumbs } from "../library/useLazyThumbs";
+import { tileName } from "../library/AssetTile";
 import { Icon } from "../ui/Icon";
 
 /**
@@ -23,9 +24,15 @@ export function Filmstrip() {
   // Al cambiar de foto (clic, ←/→) la actual queda a la vista.
   useEffect(() => {
     if (!current) return;
-    stripRef.current
-      ?.querySelector<HTMLElement>(`[data-asset-cell="${CSS.escape(current)}"]`)
-      ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    const strip = stripRef.current;
+    const btn = strip?.querySelector<HTMLElement>(`[data-asset-cell="${CSS.escape(current)}"]`);
+    // Si el foco estaba en la tira (←/→ del editor), acompaña a la foto actual; si está en otro
+    // lado (visor, controles), no se le roba.
+    const active = document.activeElement;
+    if (btn && active instanceof HTMLElement && active !== btn && strip?.contains(active)) {
+      btn.focus({ preventScroll: true });
+    }
+    btn?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   }, [current, ids]);
 
   return (
@@ -40,7 +47,7 @@ export function Filmstrip() {
             className={`film-item ${isCurrent ? "is-current" : ""}`}
             data-asset-cell={a.id}
             aria-current={isCurrent ? "true" : undefined}
-            aria-label={a.missing ? `${a.file}, no se encuentra` : a.file}
+            aria-label={tileName(a)}
             disabled={a.missing}
             title={a.missing ? `${a.file}, no se encuentra` : a.file}
             onClick={() => {
