@@ -375,3 +375,117 @@
     padding: var(--sp-5);
   }
 }
+
+/* ---- Avisos y cola de exports: abajo a la derecha ----
+ * Por encima de la barra de selección (34 px de botón + 2 × 12 px + borde) o de la tira del
+ * editor (64 px + 2 × 2 px de borde + 2 × 8 px + borde), para no taparlas. */
+.dock {
+  position: fixed;
+  right: var(--sp-4);
+  bottom: var(--sp-4);
+  z-index: 30; /* los avisos quedan por encima de los diálogos (la cola también; ver #62) */
+  display: grid;
+  gap: var(--sp-2);
+  width: min(380px, calc(100vw - 32px));
+}
+.dock[data-place="selection"] {
+  bottom: calc(59px + var(--sp-3));
+}
+.dock[data-place="editor"] {
+  bottom: calc(85px + var(--sp-3));
+}
+/* El botón va primero en el DOM (orden de Tab) pero el panel se ve arriba de él. */
+.queue {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--sp-2);
+}
+.queue-toggle {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 34px;
+  padding: 0 var(--sp-3) 0 var(--sp-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--raised);
+  box-shadow: var(--shadow-float);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.queue-toggle:hover {
+  background: var(--overlay);
+}
+.queue-toggle > svg:first-child {
+  color: var(--ok);
+}
+.queue-toggle > svg:last-child {
+  color: var(--text-muted);
+  transform: rotate(-90deg);
+  transition: transform var(--t-fast) var(--ease);
+}
+.queue-toggle[aria-expanded="true"] > svg:last-child {
+  transform: rotate(90deg);
+}
+.queue-panel {
+  max-height: min(420px, 50vh);
+  overflow-y: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--raised);
+  box-shadow: var(--shadow-float);
+}
+.queue-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.queue-row {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-left: 3px solid var(--accent);
+}
+.queue-row + .queue-row {
+  border-top: 1px solid var(--line);
+}
+.queue-row.is-error {
+  border-left-color: var(--danger);
+}
+.queue-title {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.queue-progress-text {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.queue-row progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--accent);
+}
+.queue-summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+}
+.queue-summary > svg {
+  margin-top: 2px;
+  color: var(--ok);
+}
+.queue-row.is-error .queue-summary > svg {
+  color: var(--danger);
+}
+.queue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}

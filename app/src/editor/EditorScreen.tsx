@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import { ExportDialog } from "../export/ExportDialog";
+import { adjustShortcut, isTyping } from "../lib/keys";
 import { hasGeometry } from "../lib/stack";
-import { appStore, editorStore, useApp, useEditor } from "../state/store";
+import { appStore, batchStore, editorStore, useApp, useEditor } from "../state/store";
 import { Button, IconButton } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Tooltip } from "../ui/Tooltip";
 import { AdjustPanel } from "./AdjustPanel";
-import { ExportDialog } from "./ExportDialog";
 import { Filmstrip } from "./Filmstrip";
 import { PlanPanel } from "./PlanPanel";
 import { focusPrompt, PromptBox } from "./PromptBox";
@@ -19,9 +20,13 @@ export function closeEditor() {
   appStore.getState().refreshProject();
 }
 
-function isTyping(target: EventTarget | null): boolean {
-  const el = target as HTMLElement | null;
-  return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+/** Pegar los ajustes copiados en la foto abierta (sin recorte ni giro) y volver a leer su pila. */
+async function pasteHere(id: string) {
+  if (editorStore.getState().plan !== null) {
+    appStore.getState().notify("info", "Aplicá o descartá el plan antes de pegar ajustes");
+    return;
+  }
+  if (await batchStore.getState().paste([id], false)) await editorStore.getState().reload();
 }
 
 /** Editor de una foto: visor a la izquierda, ajustes a la derecha (diseño §7). */
@@ -29,6 +34,8 @@ export function EditorScreen() {
   const asset = useEditor((s) => s.asset)!;
   const saved = useEditor((s) => s.saved);
   const geometry = useEditor((s) => hasGeometry(s.stack));
+  const exportHint = useEditor((s) => s.exportHint);
+  const pendingPlan = useEditor((s) => s.plan !== null);
   const assets = useApp((s) => s.project?.assets ?? []);
   const [holdBefore, setHoldBefore] = useState(false);
   const [split, setSplit] = useState(false);
@@ -57,6 +64,8 @@ export function EditorScreen() {
       if (isTyping(e.target)) return; // Esc en un campo lo maneja el campo (cancela lo escrito)
       // Con un diálogo abierto (export) los atajos del editor no corren: el diálogo maneja Esc.
       if (document.querySelector("[role=dialog]")) return;
+      // En la cola de exports, las flechas y Esc son de la cola.
+      if ((e.target as HTMLElement | null)?.closest?.(".queue")) return;
       // `\` va antes que los modificadores: en teclados en español se escribe con AltGr (Ctrl+Alt).
       if (isBackslash(e)) {
         e.preventDefault();
@@ -69,11 +78,21 @@ export function EditorScreen() {
         else closeEditor();
         return;
       }
+      // Ctrl+Shift+C / V: copiar la pila guardada de esta foto / pegar en ella (Ctrl+Z la deshace).
+      const adjust = adjustShortcut(e);
+      if (adjust === "copy" || adjust === "paste") {
+        e.preventDefault();
+        if (s.asset && !s.asset.missing && s.saved) {
+          if (adjust === "copy") batchStore.getState().copyStack(s.saved.stack, s.asset.file);
+          else void pasteHere(s.asset.id);
+        }
+        return;
+      }
       const key = e.key.toLowerCase();
       if (e.ctrlKey && !e.altKey) {
         if (key === "k") focusPrompt();
         else if (key === "e") {
-          if (!s.asset?.missing) setExporting(true);
+          if (!s.asset?.missing && !e.repeat) setExporting(true);
         }
         else if (key === "z" && !e.shiftKey) s.undo();
         else if ((key === "z" && e.shiftKey) || key === "y") s.redo();
@@ -183,8 +202,14 @@ export function EditorScreen() {
           Exportar…
         </Button>
       </header>
-      <ExportDialog key={asset.id} open={exporting} onOpenChange={setExporting} />
-      <div className="editor-body">
+      <ExportDialog
+        open={exporting}
+        onOpenChange={setExporting}
+        assets={[asset]}
+        hint={exportHint}
+        pendingPlan={pendingPlan}
+      />
+      <div className="editor-body" data-main tabIndex={-1}>
         <Viewer holdBefore={holdBefore} split={split} />
         <aside className="panel" aria-label="Pedido y ajustes de la foto">
           <PromptBox key={asset.id} />

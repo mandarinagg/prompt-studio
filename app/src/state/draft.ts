@@ -82,3 +82,18 @@ export function hasIncluded(plan: PlanState | null | undefined): boolean {
 export function visibleOps(plan: PlanState | null | undefined): boolean {
   return !!plan && plan.status === "ready" && plan.rows.some((r) => r.included && r.op.op !== "resize");
 }
+
+/** Incluye o excluye una fila del plan; no toca un plan que no está listo. */
+export function toggleRowIn(plan: PlanState, index: number): PlanState {
+  if (plan.status !== "ready") return plan;
+  return { ...plan, rows: plan.rows.map((r) => (r.index === index ? { ...r, included: !r.included } : r)) };
+}
+
+/** Cambia el valor de una fila (unidades del slider); NaN vuelve al valor del plan. */
+export function editRowIn(plan: PlanState, index: number, value: number): PlanState {
+  const row = plan.rows.find((r) => r.index === index);
+  const a = row && rowAdjustment(row.op);
+  if (plan.status !== "ready" || !row || !a) return plan;
+  const edited = clampEdit(a, value);
+  return { ...plan, rows: plan.rows.map((r) => (r.index === index ? { ...r, edited } : r)) };
+}

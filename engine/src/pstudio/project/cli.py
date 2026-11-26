@@ -40,12 +40,20 @@ def add_parser(sub: argparse._SubParsersAction) -> None:
     show.add_argument("asset")
     show.add_argument("--json", action="store_true")
 
-    edit = ps.add_parser("edit", help="fusiona un plan en la pila de una foto")
+    edit = ps.add_parser("edit", help="fusiona un plan en la pila de una o varias fotos")
     edit.add_argument("project")
-    edit.add_argument("asset")
+    edit.add_argument("assets", nargs="+", metavar="asset")
     edit.add_argument("--plan", required=True, help="archivo .json con el EditPlan")
     edit.add_argument("--replace", action="store_true", help="reemplaza la pila en vez de sumar")
     edit.add_argument("--label", help="texto de la entrada del historial")
+
+    pa = ps.add_parser("paste", help="pega los ajustes de una foto en otras (reemplaza)")
+    pa.add_argument("project")
+    pa.add_argument("source", help="foto de la que se copia la pila")
+    pa.add_argument("assets", nargs="+", metavar="to")
+    pa.add_argument(
+        "--geometry", action="store_true", help="también recorte, rotación y enderezado"
+    )
 
     for name, text in (("undo", "deshace"), ("redo", "rehace")):
         c = ps.add_parser(name, help=f"{text} el último cambio de una foto")
@@ -90,6 +98,7 @@ _VERBS = {
     "list": "leer",
     "show": "leer",
     "edit": "guardar",
+    "paste": "guardar",
     "undo": "guardar",
     "redo": "guardar",
     "relink": "ubicar",
@@ -181,30 +190,64 @@ def _show(args: argparse.Namespace) -> int:
 
 
 def _edit(args: argparse.Namespace) -> int:
+    import secrets
+
     from pstudio import _load_plan
     from pstudio.project.history import push
     from pstudio.project.stack import merge
     from pstudio.project.store import open_project, save
 
     project = open_project(Path(args.project))
-    asset = project.asset(args.asset)
+    assets = [project.asset(i) for i in args.assets]  # error claro antes de tocar nada
+    if len({a.id for a in assets}) != len(assets):
+        print("hay fotos repetidas en el pedido", file=sys.stderr)
+        return 1
     plan = _load_plan(Path(args.plan))
     if plan is None:
         return 1
-    if args.replace:
-        stack, hint = plan, None
-    else:
-        merged = merge(asset.stack, plan)
-        stack, hint = merged.stack, merged.export_hint
     label = args.label or (
         f"Pedido: {plan.source_prompt}" if plan.source_prompt else "Plan aplicado"
     )
-    changed = push(asset, stack, label)
+    group = secrets.token_hex(8) if len(assets) > 1 else None
+    changed = 0
+    hint = None
+    for asset in assets:
+        if args.replace:
+            stack = plan
+        else:
+            merged = merge(asset.stack, plan)
+            stack, hint = merged.stack, merged.export_hint
+        changed += push(asset, stack, label, group)
     save(Path(args.project), project)
-    print("pila actualizada" if changed else "sin cambios")
+    if len(assets) == 1:
+        print("pila actualizada" if changed else "sin cambios")
+    else:
+        print(f"pila actualizada en {changed} de {len(assets)} fotos" if changed else "sin cambios")
     if hint is not None:
         size = f"{hint.width or '?'}×{hint.height or '?'}"
         print(f"el plan pedía resize {size}: se aplica al exportar (elegí un preset)")
+    return 0
+
+
+def _paste(args: argparse.Namespace) -> int:
+    import secrets
+
+    from pstudio.project.history import push
+    from pstudio.project.stack import paste
+    from pstudio.project.store import open_project, save
+
+    project = open_project(Path(args.project))
+    source = project.asset(args.source).stack
+    assets = [project.asset(i) for i in args.assets]
+    if len({a.id for a in assets}) != len(assets):
+        print("hay fotos repetidas en el pedido", file=sys.stderr)
+        return 1
+    group = secrets.token_hex(8)
+    changed = sum(
+        push(a, paste(a.stack, source, args.geometry), "Ajustes pegados", group) for a in assets
+    )
+    save(Path(args.project), project)
+    print(f"ajustes pegados en {changed} de {len(assets)} fotos" if changed else "sin cambios")
     return 0
 
 
@@ -309,6 +352,7 @@ _COMMANDS = {
     "list": _list,
     "show": _show,
     "edit": _edit,
+    "paste": _paste,
     "undo": _step,
     "redo": _step,
     "relink": _relink,

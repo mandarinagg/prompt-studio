@@ -1,8 +1,9 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { call } from "../engine/client";
+import { referenceOf } from "../state/batch";
 import { moveFocusIndex } from "../state/library";
-import { appStore, editorStore, libraryStore, useApp, useLibrary } from "../state/store";
+import { appStore, editorStore, libraryStore, useApp, useBatch, useLibrary } from "../state/store";
 import { AssetTile } from "./AssetTile";
 import { SelectionBar } from "./SelectionBar";
 import { useLazyThumbs } from "./useLazyThumbs";
@@ -33,12 +34,23 @@ async function relink(id: string) {
  * La cuadrícula de fotos del proyecto. ARIA: `listbox` de selección múltiple con una `option` por
  * foto y foco móvil (roving tabindex): una sola foto entra con Tab y las flechas mueven el foco.
  */
-export function LibraryGrid() {
+export function LibraryGrid({
+  onExport,
+  onBatch,
+  onCopy,
+  onPaste,
+}: {
+  onExport(): void;
+  onBatch(): void;
+  onCopy(): void;
+  onPaste(): void;
+}) {
   const assets = useApp((s) => s.project?.assets);
   const list = useMemo(() => assets ?? [], [assets]);
   const thumbs = useLibrary((s) => s.thumbs);
   const selected = useLibrary((s) => s.selected);
   const focus = useLibrary((s) => s.focus);
+  const clipboard = useBatch((s) => s.clipboard);
   const gridRef = useRef<HTMLDivElement>(null);
 
   const ids = useMemo(() => list.map((a) => a.id), [list]);
@@ -139,6 +151,13 @@ export function LibraryGrid() {
           count={selected.length}
           canEdit={!!first && !first.missing}
           onEdit={() => first && openAsset(first.id)}
+          canBatch={referenceOf(selected, list, focus) !== null}
+          canCopy={selected.length === 1 && !!first && !first.missing}
+          onCopy={onCopy}
+          canPaste={clipboard !== null}
+          onPaste={onPaste}
+          onBatch={onBatch}
+          onExport={onExport}
           onClear={() => libraryStore.getState().clear()}
         />
       )}

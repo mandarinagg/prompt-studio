@@ -14,7 +14,8 @@
   cursor: pointer;
   transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
 }
-.btn:disabled {
+.btn:disabled,
+.btn[aria-disabled="true"] {
   opacity: 0.5;
   cursor: default;
 }
@@ -185,14 +186,15 @@
 }
 
 /* ---- Avisos ---- */
+/* Dentro de `.dock` (screens.css), arriba de la cola de exports. */
 .toasts {
-  position: fixed;
-  right: var(--sp-4);
-  bottom: var(--sp-4);
+  position: relative;
+  z-index: 30;
   display: grid;
   gap: var(--sp-2);
-  width: min(380px, calc(100vw - 32px));
-  z-index: 30;
+}
+.toasts:empty {
+  display: none;
 }
 .toast {
   display: grid;

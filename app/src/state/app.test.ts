@@ -23,6 +23,7 @@ const info = (over: Partial<ProjectInfo> = {}): ProjectInfo => ({
   path: "C:\\P\\Viaje.pstudio",
   name: "Viaje",
   cache_dir: "C:\\P\\Viaje.pstudio\\cache",
+  export_dir: "C:/P/Exportadas",
   assets: [],
   ...over,
 });

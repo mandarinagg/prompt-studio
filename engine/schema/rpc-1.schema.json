@@ -24,6 +24,22 @@
           ],
           "additionalProperties": false
         },
+        "asset.apply_plan_many": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/ApplyPlanManyParams"
+            },
+            "result": {
+              "$ref": "#/$defs/BatchResult"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
         "asset.history": {
           "type": "object",
           "properties": {
@@ -48,6 +64,22 @@
             },
             "result": {
               "$ref": "#/$defs/StackState"
+            }
+          },
+          "required": [
+            "params",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "asset.paste": {
+          "type": "object",
+          "properties": {
+            "params": {
+              "$ref": "#/$defs/PasteParams"
+            },
+            "result": {
+              "$ref": "#/$defs/BatchResult"
             }
           },
           "required": [
@@ -443,8 +475,10 @@
       },
       "required": [
         "asset.apply_plan",
+        "asset.apply_plan_many",
         "asset.history",
         "asset.jump",
+        "asset.paste",
         "asset.redo",
         "asset.reset",
         "asset.set_stack",
@@ -504,6 +538,42 @@
   ],
   "additionalProperties": false,
   "$defs": {
+    "ApplyPlanManyParams": {
+      "additionalProperties": false,
+      "properties": {
+        "assets": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Assets",
+          "type": "array"
+        },
+        "plan": {
+          "$ref": "#/$defs/EditPlan"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        }
+      },
+      "required": [
+        "assets",
+        "plan"
+      ],
+      "title": "ApplyPlanManyParams",
+      "type": "object"
+    },
     "ApplyPlanParams": {
       "additionalProperties": false,
       "properties": {
@@ -634,6 +704,34 @@
         "op"
       ],
       "title": "AutoWhiteBalance",
+      "type": "object"
+    },
+    "BatchResult": {
+      "properties": {
+        "group_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Group Id"
+        },
+        "states": {
+          "items": {
+            "$ref": "#/$defs/StackState"
+          },
+          "title": "States",
+          "type": "array"
+        }
+      },
+      "required": [
+        "group_id",
+        "states"
+      ],
+      "title": "BatchResult",
       "type": "object"
     },
     "Blacks": {
@@ -1561,6 +1659,33 @@
       "title": "OpenParams",
       "type": "object"
     },
+    "PasteParams": {
+      "additionalProperties": false,
+      "properties": {
+        "assets": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Assets",
+          "type": "array"
+        },
+        "stack": {
+          "$ref": "#/$defs/EditPlan"
+        },
+        "geometry": {
+          "default": false,
+          "title": "Geometry",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "assets",
+        "stack"
+      ],
+      "title": "PasteParams",
+      "type": "object"
+    },
     "PathParams": {
       "additionalProperties": false,
       "properties": {
@@ -1787,6 +1912,10 @@
           "title": "Cache Dir",
           "type": "string"
         },
+        "export_dir": {
+          "title": "Export Dir",
+          "type": "string"
+        },
         "assets": {
           "items": {
             "$ref": "#/$defs/AssetSummary"
@@ -1799,6 +1928,7 @@
         "path",
         "name",
         "cache_dir",
+        "export_dir",
         "assets"
       ],
       "title": "ProjectInfo",

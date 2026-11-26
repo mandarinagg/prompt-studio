@@ -222,3 +222,58 @@ def _ctrl_c_export(tmp_path, capsys, monkeypatch, *, tty):
     assert all(n in out for n in kept)
     assert [sha256_file(f) for f in files] == before
     return err
+
+
+def _project_ids(tmp_path, capsys, n=3):
+    files = [photo(tmp_path / "in" / f"f{i}.jpg", i) for i in range(n)]
+    run(["new", str(tmp_path), "P"], capsys)
+    proj = str(tmp_path / "P.pstudio")
+    run(["add", proj, *map(str, files)], capsys)
+    _, out, _ = run(["list", proj, "--json"], capsys)
+    return proj, [a["id"] for a in json.loads(out)], files
+
+
+def _shown(proj, asset, capsys):
+    return json.loads(run(["show", proj, asset, "--json"], capsys)[1])
+
+
+def test_cli_edit_many_shares_group(tmp_path, capsys):
+    proj, ids, files = _project_ids(tmp_path, capsys)
+    before = [sha256_file(f) for f in files]
+    plan = tmp_path / "plan.json"
+    plan.write_text(json.dumps({"operations": [{"op": "exposure", "ev": 0.5}]}), encoding="utf-8")
+    code, out, _ = run(["edit", proj, *ids, "--plan", str(plan)], capsys)
+    assert code == 0 and "pila actualizada" in out
+    groups = set()
+    for i in ids:
+        shown = _shown(proj, i, capsys)
+        assert shown["stack"]["operations"] == [{"op": "exposure", "ev": 0.5}]
+        groups.add(shown["history"][shown["cursor"]]["group_id"])
+    assert len(groups) == 1 and None not in groups
+    assert [sha256_file(f) for f in files] == before
+
+
+def test_cli_paste_keeps_target_geometry(tmp_path, capsys):
+    proj, ids, files = _project_ids(tmp_path, capsys)
+    before = [sha256_file(f) for f in files]
+    src, a, b = ids
+    for asset, ops in (
+        (src, [{"op": "crop", "aspect_ratio": "1:1"}, {"op": "vibrance", "amount": 20}]),
+        (a, [{"op": "rotate", "degrees": 90}]),
+    ):
+        plan = tmp_path / "p.json"
+        plan.write_text(json.dumps({"operations": ops}), encoding="utf-8")
+        assert run(["edit", proj, asset, "--plan", str(plan)], capsys)[0] == 0
+
+    code, _, _ = run(["paste", proj, src, a, b], capsys)
+    assert code == 0
+    ops_a = _shown(proj, a, capsys)["stack"]["operations"]
+    assert [o["op"] for o in ops_a] == ["rotate", "vibrance"]
+    shown_b = _shown(proj, b, capsys)
+    assert [o["op"] for o in shown_b["stack"]["operations"]] == ["vibrance"]
+    assert shown_b["history"][shown_b["cursor"]]["label"] == "Ajustes pegados"
+
+    assert run(["paste", proj, src, a, "--geometry"], capsys)[0] == 0
+    ops_a = _shown(proj, a, capsys)["stack"]["operations"]
+    assert [o["op"] for o in ops_a] == ["crop", "vibrance"]
+    assert [sha256_file(f) for f in files] == before

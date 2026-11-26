@@ -190,3 +190,26 @@ def test_session_without_notifier_still_runs_jobs(tmp_path):
         assert job["id"] == info["id"] and job["status"] == "done"
     finally:
         s.close()
+
+
+def test_job_export_remembers_out_dir(rpc, tmp_path):
+    chosen = tmp_path / "elegida"
+    info = rpc("job.export", assets=[rpc.ids[0]], preset="original", out_dir=str(chosen))
+    rpc.wait(info["id"])
+    assert rpc("project.info")["export_dir"] == str(chosen)
+    path = rpc("project.info")["path"]
+    rpc("project.close")
+    assert rpc("project.open", path=path)["export_dir"] == str(chosen)
+    again = rpc("job.export", assets=[rpc.ids[1]], preset="original")
+    assert Path(again["out_dir"]) == chosen
+    done = rpc.wait(again["id"])["params"]
+    assert Path(done["results"][0]["path"]).parent == chosen
+
+
+def test_job_export_relative_out_dir_rejected(rpc, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    err = rpc.error("job.export", assets=[rpc.ids[0]], out_dir="relativa")
+    assert err["code"] == INVALID_PARAMS
+    assert err["message"] == "la carpeta destino tiene que ser una ruta completa"
+    assert rpc("job.list")["jobs"] == []
+    assert not Path("relativa").exists()
