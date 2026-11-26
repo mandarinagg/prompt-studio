@@ -223,14 +223,27 @@ fn explorer_path(path: &Path) -> PathBuf {
     }
 }
 
+/// El argumento tal cual lo recibe explorer.exe: entre comillas, porque parte sus propios
+/// argumentos por comas y Rust solo entrecomilla los que tienen espacios (un nombre de carpeta
+/// con coma abriría otra carpeta). Una ruta de Windows no puede contener `"`.
+fn explorer_arg(path: &Path) -> String {
+    format!("\"{}\"", explorer_path(path).display())
+}
+
 /// Abre en el Explorador una carpeta de exports (botón "Abrir carpeta" de la cola).
 #[tauri::command]
 fn open_folder(state: tauri::State<'_, AppState>, path: String) -> Result<(), EngineError> {
     let dir = allowed_folder(&state.export_dirs.lock().unwrap(), Path::new(&path))?;
     // No se espera el código de salida: explorer.exe devuelve 1 aun cuando abre bien.
-    std::process::Command::new("explorer.exe")
-        .arg(explorer_path(&dir))
-        .spawn()
+    let mut cmd = std::process::Command::new("explorer.exe");
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.raw_arg(explorer_arg(&dir));
+    }
+    #[cfg(not(windows))]
+    cmd.arg(explorer_path(&dir));
+    cmd.spawn()
         .map(|_| ())
         .map_err(|e| local_error(format!("no se pudo abrir el Explorador: {e}")))
 }
@@ -418,6 +431,14 @@ mod tests {
         assert_eq!(
             explorer_path(Path::new(r"C:\fotos")),
             PathBuf::from(r"C:\fotos")
+        );
+    }
+
+    #[test]
+    fn explorer_arg_quotes_commas_and_spaces() {
+        assert_eq!(
+            explorer_arg(Path::new(r"\\?\C:\fotos\Boda, Ana y Luis")),
+            r#""C:\fotos\Boda, Ana y Luis""#
         );
     }
 }

@@ -22,6 +22,10 @@ export function closeEditor() {
 
 /** Pegar los ajustes copiados en la foto abierta (sin recorte ni giro) y volver a leer su pila. */
 async function pasteHere(id: string) {
+  if (editorStore.getState().plan !== null) {
+    appStore.getState().notify("info", "Aplicá o descartá el plan antes de pegar ajustes");
+    return;
+  }
   if (await batchStore.getState().paste([id], false)) await editorStore.getState().reload();
 }
 

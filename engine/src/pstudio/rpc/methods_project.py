@@ -295,9 +295,10 @@ def _batch(s: Session, ids: list[str], label: str, change) -> BatchResult:
         raise RpcError(INVALID_PARAMS, "hay fotos repetidas en el pedido")
     assets = [s.asset(i) for i in ids]
     group = secrets.token_hex(8)
+    # Primero se calcula todo: si `change` falla en la foto N, ninguna quedó modificada en memoria.
+    new = [change(asset) for asset in assets]
     states: list[StackState] = []
-    for asset in assets:
-        stack, hint = change(asset)
+    for asset, (stack, hint) in zip(assets, new, strict=True):
         states.append(_state(asset, history.push(asset, stack, label, group), hint))
     any_changed = any(st.changed for st in states)
     if any_changed:

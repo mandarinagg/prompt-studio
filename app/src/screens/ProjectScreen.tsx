@@ -5,7 +5,7 @@ import { adjustShortcut, isExportShortcut } from "../lib/keys";
 import { BatchPromptDialog } from "../library/BatchPromptDialog";
 import { PasteDialog } from "../library/PasteDialog";
 import { IMAGE_FILTER, LibraryGrid } from "../library/LibraryGrid";
-import { batchStore, useApp, useLibrary } from "../state/store";
+import { batchStore, libraryStore, useApp, useLibrary } from "../state/store";
 import { Button, IconButton } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 
@@ -31,6 +31,7 @@ export function ProjectScreen({ dragging }: { dragging: boolean }) {
     batchStore.getState().start(
       toExport.map((a) => a.id),
       project.assets,
+      libraryStore.getState().focus,
     );
     setBatching(true);
   };
@@ -65,6 +66,7 @@ export function ProjectScreen({ dragging }: { dragging: boolean }) {
     const down = (e: KeyboardEvent) => {
       if (!isExportShortcut(e)) return;
       if (document.querySelector("[role=dialog]") || toExport.length === 0) return;
+      if ((e.target as HTMLElement | null)?.closest?.(".queue")) return;
       e.preventDefault();
       setExporting(true);
     };

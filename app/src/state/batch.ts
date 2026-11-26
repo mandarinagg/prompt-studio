@@ -40,7 +40,8 @@ export interface BatchState {
   /** Ajustes copiados de una foto (se pierden al cambiar de proyecto). */
   clipboard: Clipboard | null;
 
-  start(targets: string[], assets: AssetSummary[]): void;
+  /** `focused`: la foto con foco en la cuadrícula; si está entre las fotos del lote, es la referencia. */
+  start(targets: string[], assets: AssetSummary[], focused?: string | null): void;
   ask(prompt: string): Promise<void>;
   /** Responde la pregunta del plan: se agrega al pedido y se vuelve a planificar. */
   answer(text: string): Promise<void>;
@@ -61,9 +62,10 @@ export interface BatchState {
   reset(): void;
 }
 
-/** La primera de `targets`, en el orden del proyecto, que no falta. */
-export function referenceOf(targets: string[], assets: AssetSummary[]): string | null {
+/** La foto con foco si es del lote y no falta; si no, la primera de `targets` (orden del proyecto) que no falta. */
+export function referenceOf(targets: string[], assets: AssetSummary[], focused?: string | null): string | null {
   const wanted = new Set(targets);
+  if (focused != null && wanted.has(focused) && assets.some((a) => a.id === focused && !a.missing)) return focused;
   return assets.find((a) => wanted.has(a.id) && !a.missing)?.id ?? null;
 }
 
@@ -88,9 +90,9 @@ export function createBatchStore(api: BatchApi): StoreApi<BatchState> {
       applying: false,
       clipboard: null,
 
-      start(targets, assets) {
+      start(targets, assets, focused) {
         gen++;
-        set({ targets, reference: referenceOf(targets, assets), plan: null });
+        set({ targets, reference: referenceOf(targets, assets, focused), plan: null });
       },
 
       async ask(prompt) {

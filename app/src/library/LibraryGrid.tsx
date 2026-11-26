@@ -151,7 +151,7 @@ export function LibraryGrid({
           count={selected.length}
           canEdit={!!first && !first.missing}
           onEdit={() => first && openAsset(first.id)}
-          canBatch={referenceOf(selected, list) !== null}
+          canBatch={referenceOf(selected, list, focus) !== null}
           canCopy={selected.length === 1 && !!first && !first.missing}
           onCopy={onCopy}
           canPaste={clipboard !== null}

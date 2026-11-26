@@ -321,6 +321,29 @@ def test_apply_plan_many_unknown_id_changes_nothing(three, commits):
     assert commits == []
 
 
+def test_apply_plan_many_raise_midway_changes_nothing(three, commits, monkeypatch):
+    import pstudio.rpc.methods_project as mp
+
+    real = mp.merge
+    n = []
+
+    def flaky(stack, plan):
+        n.append(1)
+        if len(n) == 2:
+            raise RuntimeError("boom")
+        return real(stack, plan)
+
+    monkeypatch.setattr(mp, "merge", flaky)
+    plan = {"operations": [{"op": "exposure", "ev": 0.5}]}
+    commits.clear()
+    err = three.error("asset.apply_plan_many", assets=three.ids, plan=plan)
+    assert err["code"]
+    for i in three.ids:
+        assert three("asset.state", asset=i)["stack"]["operations"] == []
+        assert three("asset.history", asset=i)["cursor"] == 0
+    assert commits == []
+
+
 def test_apply_plan_many_duplicate_ids_rejected(three, commits):
     plan = {"operations": [{"op": "exposure", "ev": 0.5}]}
     commits.clear()

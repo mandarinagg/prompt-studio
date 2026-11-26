@@ -59,6 +59,14 @@ describe("referenceOf", () => {
     expect(referenceOf(["a1"], assets)).toBeNull();
     expect(referenceOf([], assets)).toBeNull();
   });
+
+  it("referenceOf prefers the focused photo when selected and present", () => {
+    const assets = [asset("a1"), asset("a2", true), asset("a3")];
+    expect(referenceOf(["a1", "a3"], assets, "a3")).toBe("a3");
+    expect(referenceOf(["a1", "a3"], assets, "a2")).toBe("a1"); // no está en el lote
+    expect(referenceOf(["a1", "a2"], assets, "a2")).toBe("a1"); // con foco pero falta
+    expect(referenceOf(["a1", "a3"], assets, null)).toBe("a1");
+  });
 });
 
 describe("store del pedido para varias fotos", () => {

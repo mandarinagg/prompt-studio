@@ -93,6 +93,7 @@ export function QueueDrawer() {
   const presets = useJobs((s) => s.presets);
   const [open, setOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const panelId = useId();
 
   const list = useMemo(() => order.flatMap((id) => (jobs[id] ? [jobs[id]] : [])), [order, jobs]);
@@ -101,6 +102,14 @@ export function QueueDrawer() {
   useEffect(() => {
     if (list.length === 0) setOpen(false);
   }, [list.length]);
+
+  // Al abrir, el foco entra a la cola: el toggle va antes que el panel en el DOM (el panel se ve
+  // arriba por CSS), así que sin esto el próximo Tab saldría de la cola.
+  useEffect(() => {
+    if (!open) return;
+    const panel = panelRef.current;
+    (panel?.querySelector<HTMLElement>("button:not([disabled])") ?? panel)?.focus({ preventScroll: true });
+  }, [open]);
 
   if (list.length === 0) return null;
 
@@ -119,8 +128,27 @@ export function QueueDrawer() {
         close();
       }}
     >
+      <button
+        ref={toggleRef}
+        type="button"
+        className={`queue-toggle ${running ? "is-running" : ""}`}
+        aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
+        onClick={() => setOpen((o) => !o)}
+      >
+        {!running && <Icon name="check" size={16} />}
+        <span>{queueLabel(list)}</span>
+        <Icon name="chevron" size={14} />
+      </button>
       {open && (
-        <section id={panelId} className="queue-panel" role="region" aria-label="Cola de exports">
+        <section
+          ref={panelRef}
+          id={panelId}
+          className="queue-panel"
+          role="region"
+          tabIndex={-1}
+          aria-label="Cola de exports"
+        >
           <ul className="queue-list">
             {list.map((job) => (
               <QueueRow
@@ -134,18 +162,6 @@ export function QueueDrawer() {
           </ul>
         </section>
       )}
-      <button
-        ref={toggleRef}
-        type="button"
-        className={`queue-toggle ${running ? "is-running" : ""}`}
-        aria-expanded={open}
-        aria-controls={open ? panelId : undefined}
-        onClick={() => setOpen((o) => !o)}
-      >
-        {!running && <Icon name="check" size={16} />}
-        <span>{queueLabel(list)}</span>
-        <Icon name="chevron" size={14} />
-      </button>
     </div>
   );
 }

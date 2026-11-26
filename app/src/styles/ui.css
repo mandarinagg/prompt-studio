@@ -188,6 +188,8 @@
 /* ---- Avisos ---- */
 /* Dentro de `.dock` (screens.css), arriba de la cola de exports. */
 .toasts {
+  position: relative;
+  z-index: 30;
   display: grid;
   gap: var(--sp-2);
 }
