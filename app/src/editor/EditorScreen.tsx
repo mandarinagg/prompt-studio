@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ExportDialog } from "../export/ExportDialog";
+import { isTyping } from "../lib/keys";
 import { hasGeometry } from "../lib/stack";
 import { appStore, editorStore, useApp, useEditor } from "../state/store";
 import { Button, IconButton } from "../ui/Button";
@@ -17,11 +18,6 @@ const HOLD_MS = 250;
 export function closeEditor() {
   editorStore.getState().close();
   appStore.getState().refreshProject();
-}
-
-function isTyping(target: EventTarget | null): boolean {
-  const el = target as HTMLElement | null;
-  return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
 }
 
 /** Editor de una foto: visor a la izquierda, ajustes a la derecha (diseño §7). */
@@ -77,7 +73,7 @@ export function EditorScreen() {
       if (e.ctrlKey && !e.altKey) {
         if (key === "k") focusPrompt();
         else if (key === "e") {
-          if (!s.asset?.missing) setExporting(true);
+          if (!s.asset?.missing && !e.repeat) setExporting(true);
         }
         else if (key === "z" && !e.shiftKey) s.undo();
         else if ((key === "z" && e.shiftKey) || key === "y") s.redo();
@@ -194,7 +190,7 @@ export function EditorScreen() {
         hint={exportHint}
         pendingPlan={pendingPlan}
       />
-      <div className="editor-body">
+      <div className="editor-body" data-main tabIndex={-1}>
         <Viewer holdBefore={holdBefore} split={split} />
         <aside className="panel" aria-label="Pedido y ajustes de la foto">
           <PromptBox key={asset.id} />

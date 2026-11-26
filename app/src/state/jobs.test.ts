@@ -163,7 +163,7 @@ describe("store de trabajos", () => {
     });
     const store = createJobsStore(f.api);
     await store.getState().submitExport(["a1"], "original");
-    await store.getState().cancel("j1");
+    expect(await store.getState().cancel("j1")).toBe(true);
     expect(f.calls[1]).toEqual({ method: "job.cancel", params: { job: "j1" } });
     expect(store.getState().jobs.j1.status).toBe("cancelled");
     store.getState().onEvent("job.done", info({ status: "cancelled" })); // el evento del engine
@@ -174,7 +174,7 @@ describe("store de trabajos", () => {
     const f = fakeApi({ "job.export": () => info() });
     const store = createJobsStore(f.api);
     await store.getState().submitExport(["a1"], "web");
-    await store.getState().cancel("j1");
+    expect(await store.getState().cancel("j1")).toBe(false); // la cola vuelve a dejar intentarlo
     expect(f.notes).toEqual([{ kind: "error", text: "No se pudo cancelar: sin manejador para job.cancel." }]);
     expect(store.getState().jobs.j1.status).toBe("queued");
   });

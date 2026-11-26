@@ -23,7 +23,8 @@ export interface JobsState {
   presets: Record<string, ExportPreset>;
 
   submitExport(assets: [string, ...string[]], preset?: ExportPreset, outDir?: string): Promise<JobInfo>;
-  cancel(id: string): Promise<void>;
+  /** Pide cancelar; `false` si el pedido falló (ya avisó y se puede reintentar). */
+  cancel(id: string): Promise<boolean>;
   /** Saca de la cola un job terminado (uno que sigue corriendo no se quita). */
   dismiss(id: string): void;
   /** Abre la carpeta donde exportó el job; si no se puede, avisa. */
@@ -130,8 +131,10 @@ export function createJobsStore(api: JobsApi): StoreApi<JobsState> {
       async cancel(id) {
         try {
           merge(await api.call("job.cancel", { job: id }));
+          return true;
         } catch (err) {
           api.notify("error", `No se pudo cancelar: ${messageOf(err)}`);
+          return false;
         }
       },
 

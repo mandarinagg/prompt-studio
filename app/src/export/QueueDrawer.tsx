@@ -17,9 +17,16 @@ function QueueRow({ job, preset, onRemoved }: { job: JobInfo; preset?: ExportPre
   const hasFile = job.results.some((r) => r.path);
 
   const cancel = async () => {
+    if (cancelling) return;
     setCancelling(true);
-    await jobsStore.getState().cancel(job.id);
-    // Si sigue corriendo, el botón queda deshabilitado hasta que el engine termine la foto en curso.
+    // Si el pedido falló (ya avisó), se puede reintentar. Si salió bien y la foto en curso todavía
+    // se está terminando, queda en "Cancelando…" hasta que llegue el final.
+    if (!(await jobsStore.getState().cancel(job.id))) setCancelling(false);
+  };
+
+  const remove = () => {
+    jobsStore.getState().dismiss(job.id);
+    onRemoved();
   };
 
   return (
@@ -37,43 +44,42 @@ function QueueRow({ job, preset, onRemoved }: { job: JobInfo; preset?: ExportPre
             max={1}
             value={job.status === "queued" ? undefined : job.fraction}
           />
-          <div className="queue-actions">
-            <Button variant="danger" aria-describedby={`${id}-title`} disabled={cancelling} onClick={cancel}>
-              {cancelling ? "Cancelando…" : "Cancelar"}
-            </Button>
-          </div>
         </>
       ) : (
-        <>
-          <p className="queue-summary">
-            <Icon name={s.kind === "error" ? "alert" : "check"} size={16} />
-            <span className="selectable">{s.text}</span>
-          </p>
-          <div className="queue-actions">
-            {hasFile && (
-              <Button
-                icon="folder"
-                aria-describedby={`${id}-title`}
-                onClick={() => void jobsStore.getState().openFolder(job.id)}
-              >
-                Abrir carpeta
-              </Button>
-            )}
-            <Button
-              variant="quiet"
-              aria-describedby={`${id}-title`}
-              onClick={() => {
-                jobsStore.getState().dismiss(job.id);
-                onRemoved();
-              }}
-            >
-              Quitar
-            </Button>
-          </div>
-        </>
+        <p className="queue-summary">
+          <Icon name={s.kind === "error" ? "alert" : "check"} size={16} />
+          <span className="selectable">{s.text}</span>
+        </p>
       )}
+      <div className="queue-actions">
+        {finished && hasFile && (
+          <Button icon="folder" aria-describedby={`${id}-title`} onClick={() => void jobsStore.getState().openFolder(job.id)}>
+            Abrir carpeta
+          </Button>
+        )}
+        {/* Cancelar y Quitar son el mismo botón (misma `key`, mismo lugar): si el job termina con
+            el foco en Cancelar, el foco queda en Quitar en vez de perderse. Mientras cancela usa
+            aria-disabled y no disabled, que también le sacaría el foco. */}
+        <Button
+          key="end"
+          variant={finished ? "quiet" : "danger"}
+          aria-describedby={`${id}-title`}
+          aria-disabled={!finished && cancelling ? true : undefined}
+          onClick={finished ? remove : cancel}
+        >
+          {finished ? "Quitar" : cancelling ? "Cancelando…" : "Cancelar"}
+        </Button>
+      </div>
     </li>
   );
+}
+
+/** Con la cola vacía, el foco vuelve a la foto con foco de la cuadrícula o al área principal. */
+function focusMain() {
+  const target =
+    document.querySelector<HTMLElement>('.library-grid [data-asset][tabindex="0"]') ??
+    document.querySelector<HTMLElement>("[data-main]");
+  target?.focus({ preventScroll: true });
 }
 
 /**
@@ -117,7 +123,13 @@ export function QueueDrawer() {
         <section id={panelId} className="queue-panel" role="region" aria-label="Cola de exports">
           <ul className="queue-list">
             {list.map((job) => (
-              <QueueRow key={job.id} job={job} preset={presets[job.id]} onRemoved={() => toggleRef.current?.focus()} />
+              <QueueRow
+                key={job.id}
+                job={job}
+                preset={presets[job.id]}
+                // Si era el último, el botón de la cola desaparece: el foco va al área principal.
+                onRemoved={() => (jobsStore.getState().order.length === 0 ? focusMain() : toggleRef.current?.focus())}
+              />
             ))}
           </ul>
         </section>

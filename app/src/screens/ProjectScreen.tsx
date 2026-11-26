@@ -1,6 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useState } from "react";
 import { ExportDialog } from "../export/ExportDialog";
+import { isExportShortcut } from "../lib/keys";
 import { IMAGE_FILTER, LibraryGrid } from "../library/LibraryGrid";
 import { useApp, useLibrary } from "../state/store";
 import { Button, IconButton } from "../ui/Button";
@@ -25,7 +26,7 @@ export function ProjectScreen({ dragging }: { dragging: boolean }) {
   // Ctrl+E: exportar la selección (con un diálogo abierto, el diálogo manda).
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (!e.ctrlKey || e.altKey || e.key.toLowerCase() !== "e") return;
+      if (!isExportShortcut(e)) return;
       if (document.querySelector("[role=dialog]") || toExport.length === 0) return;
       e.preventDefault();
       setExporting(true);
@@ -73,7 +74,7 @@ export function ProjectScreen({ dragging }: { dragging: boolean }) {
       </header>
       <ExportDialog open={exporting} onOpenChange={setExporting} assets={toExport} />
 
-      <main className={`project-body ${dragging ? "is-dragging" : ""}`}>
+      <main className={`project-body ${dragging ? "is-dragging" : ""}`} data-main tabIndex={-1}>
         {count === 0 ? (
           <div className="empty">
             <Icon name="photo" size={28} />
