@@ -1,6 +1,6 @@
 import pytest
 
-from pstudio.project.stack import CANONICAL_ORDER, merge, normalize
+from pstudio.project.stack import CANONICAL_ORDER, merge, normalize, paste
 from pstudio.schema import OP_NAMES, EditPlan
 
 
@@ -156,3 +156,32 @@ def test_merge_float_sums_cancel_cleanly():
     assert get(out.stack, "exposure").ev == 0.3
     out = merge(out.stack, plan({"op": "exposure", "ev": -0.3}))
     assert names(out.stack) == []
+
+
+def test_paste_keeps_target_geometry():
+    target = plan({"op": "crop", "aspect_ratio": "1:1"}, {"op": "exposure", "ev": 1})
+    source = plan(
+        {"op": "rotate", "degrees": 90},
+        {"op": "exposure", "ev": 0.3},
+        {"op": "vibrance", "amount": 20},
+    )
+    out = paste(target, source, geometry=False)
+    assert names(out) == ["crop", "exposure", "vibrance"]
+    assert get(out, "exposure").ev == 0.3  # reemplaza, no suma
+    assert get(out, "crop").aspect_ratio == "1:1"
+
+
+def test_paste_with_geometry_replaces_all():
+    target = plan({"op": "crop", "aspect_ratio": "1:1"}, {"op": "exposure", "ev": 1})
+    source = plan(
+        {"op": "rotate", "degrees": 90},
+        {"op": "exposure", "ev": 0.3},
+        {"op": "vibrance", "amount": 20},
+    )
+    assert paste(target, source, geometry=True) == normalize(source)
+
+
+def test_paste_empty_source_clears_non_geometry():
+    target = plan({"op": "straighten", "degrees": 2}, {"op": "contrast", "amount": 10})
+    out = paste(target, EditPlan(), geometry=False)
+    assert names(out) == ["straighten"]

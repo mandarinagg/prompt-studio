@@ -7,6 +7,7 @@ Todo método que cambia algo guarda al terminar (`Session.commit`).
 
 from __future__ import annotations
 
+import secrets
 from datetime import datetime
 from pathlib import Path
 
@@ -14,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from pstudio import recent
 from pstudio.project import history
-from pstudio.project.stack import merge
+from pstudio.project.stack import merge, paste
 from pstudio.project.store import add_assets, create, relink
 from pstudio.rpc.server import ENGINE_ERROR, INVALID_PARAMS, Params, RpcError, method
 from pstudio.rpc.session import Session
@@ -34,6 +35,7 @@ class ProjectInfo(BaseModel):
     path: str
     name: str
     cache_dir: str
+    export_dir: str  # carpeta de export efectiva: la recordada, o `Exportadas/` junto al proyecto
     assets: list[AssetSummary]
 
 
@@ -54,6 +56,13 @@ class StackState(BaseModel):
     can_redo: bool
     changed: bool  # si esta llamada cambió la pila
     export_hint: Resize | None = None  # el plan pedía resize: va al export, no a la pila
+
+
+class BatchResult(BaseModel):
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+    group_id: str | None  # None si ninguna foto cambió
+    states: list[StackState]  # en el orden de `assets`
 
 
 class HistoryItem(BaseModel):
@@ -106,6 +115,18 @@ class ApplyPlanParams(AssetParams):
     group_id: str | None = None
 
 
+class ApplyPlanManyParams(Params):
+    assets: list[str] = Field(min_length=1)
+    plan: EditPlan
+    label: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+class PasteParams(Params):
+    assets: list[str] = Field(min_length=1)
+    stack: EditPlan
+    geometry: bool = False  # también pega recorte, rotación y enderezado
+
+
 class JumpParams(AssetParams):
     index: int
 
@@ -124,12 +145,18 @@ def summary(asset: Asset) -> AssetSummary:
     )
 
 
+def export_dir(s: Session) -> str:
+    """Carpeta de export efectiva: la recordada en el proyecto, o `Exportadas/` junto a él."""
+    return s.require().export_dir or str(s.require_path().parent / "Exportadas")
+
+
 def _info(s: Session) -> ProjectInfo:
     project = s.require()
     return ProjectInfo(
         path=str(s.require_path()),
         name=project.name,
         cache_dir=str(s.cache_dir),
+        export_dir=export_dir(s),
         assets=[summary(a) for a in project.assets],
     )
 
@@ -257,6 +284,45 @@ def asset_apply_plan(s: Session, p: ApplyPlanParams) -> StackState:
     )
     changed = _push(s, asset, merged.stack, label[:200], p.group_id)
     return _state(asset, changed, merged.export_hint)
+
+
+def _batch(s: Session, ids: list[str], label: str, change) -> BatchResult:
+    """Aplica `change(asset) -> (stack, hint)` a varias fotos como una sola operación.
+
+    Valida todos los ids antes de tocar nada y guarda una única vez al final.
+    """
+    if len(set(ids)) != len(ids):
+        raise RpcError(INVALID_PARAMS, "hay fotos repetidas en el pedido")
+    assets = [s.asset(i) for i in ids]
+    group = secrets.token_hex(8)
+    states: list[StackState] = []
+    for asset in assets:
+        stack, hint = change(asset)
+        states.append(_state(asset, history.push(asset, stack, label, group), hint))
+    any_changed = any(st.changed for st in states)
+    if any_changed:
+        s.commit()
+    return BatchResult(group_id=group if any_changed else None, states=states)
+
+
+@method("asset.apply_plan_many")
+def asset_apply_plan_many(s: Session, p: ApplyPlanManyParams) -> BatchResult:
+    label = p.label or (
+        f"Pedido: {p.plan.source_prompt}" if p.plan.source_prompt else "Plan aplicado"
+    )
+
+    def change(asset: Asset):
+        merged = merge(asset.stack, p.plan)
+        return merged.stack, merged.export_hint
+
+    return _batch(s, p.assets, label[:200], change)
+
+
+@method("asset.paste")
+def asset_paste(s: Session, p: PasteParams) -> BatchResult:
+    return _batch(
+        s, p.assets, "Ajustes pegados", lambda a: (paste(a.stack, p.stack, p.geometry), None)
+    )
 
 
 def _step(s: Session, asset_id: str, fn) -> StackState:

@@ -12,6 +12,10 @@ export interface Methods {
     params: ApplyPlanParams;
     result: StackState;
   };
+  "asset.apply_plan_many": {
+    params: ApplyPlanManyParams;
+    result: BatchResult;
+  };
   "asset.history": {
     params: AssetParams;
     result: History;
@@ -19,6 +23,10 @@ export interface Methods {
   "asset.jump": {
     params: JumpParams;
     result: StackState;
+  };
+  "asset.paste": {
+    params: PasteParams;
+    result: BatchResult;
   };
   "asset.redo": {
     params: AssetParams;
@@ -312,6 +320,18 @@ export interface StackState {
   changed: boolean;
   export_hint: Resize | null;
 }
+export interface ApplyPlanManyParams {
+  /**
+   * @minItems 1
+   */
+  assets: [string, ...string[]];
+  plan: EditPlan;
+  label?: string | null;
+}
+export interface BatchResult {
+  group_id: string | null;
+  states: StackState[];
+}
 export interface AssetParams {
   asset: string;
 }
@@ -327,6 +347,14 @@ export interface HistoryItem {
 export interface JumpParams {
   asset: string;
   index: number;
+}
+export interface PasteParams {
+  /**
+   * @minItems 1
+   */
+  assets: [string, ...string[]];
+  stack: EditPlan;
+  geometry?: boolean;
 }
 export interface SetStackParams {
   asset: string;
@@ -433,6 +461,7 @@ export interface ProjectInfo {
   path: string;
   name: string;
   cache_dir: string;
+  export_dir: string;
   assets: AssetSummary[];
 }
 export interface AssetSummary {

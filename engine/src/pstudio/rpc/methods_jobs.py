@@ -12,11 +12,10 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from pstudio.jobs import JobInfo
-from pstudio.rpc.server import ENGINE_ERROR, Params, RpcError, event, method
+from pstudio.rpc.methods_project import export_dir
+from pstudio.rpc.server import ENGINE_ERROR, INVALID_PARAMS, Params, RpcError, event, method
 from pstudio.rpc.session import Session
 from pstudio.schema.plan import ExportPreset
-
-EXPORT_DIR = "Exportadas"  # junto a la carpeta del proyecto
 
 for _name in ("job.progress", "job.done", "job.failed"):
     event(_name)(JobInfo)
@@ -41,8 +40,13 @@ def job_export(s: Session, p: JobExportParams) -> JobInfo:
     """Encola el export de `assets` con su pila actual (se copia ahora)."""
     project = s.require()
     assets = [s.asset(i) for i in p.assets]  # error claro antes de encolar
-    out_dir = Path(p.out_dir) if p.out_dir else s.require_path().parent / EXPORT_DIR
+    out_dir = Path(p.out_dir) if p.out_dir else Path(export_dir(s))
+    if p.out_dir and not out_dir.is_absolute():
+        raise RpcError(INVALID_PARAMS, "la carpeta destino tiene que ser una ruta completa")
     protected = [Path(a.path) for a in project.assets]  # ningún original se puede pisar
+    if p.out_dir and project.export_dir != str(out_dir):
+        project.export_dir = str(out_dir)  # la próxima vez se exporta acá
+        s.commit()
     return s.jobs.submit_export(assets, protected, out_dir, p.preset)
 
 

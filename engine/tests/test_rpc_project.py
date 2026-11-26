@@ -265,3 +265,121 @@ def test_close_project(tmp_path, rpc):
     assert rpc("project.close") is None
     assert rpc.error("project.info")["code"] == NO_PROJECT
     assert rpc("project.close") is None  # sin proyecto: no hace nada
+
+
+# ------------------------------------------------------------------------------------- lote
+@pytest.fixture
+def three(tmp_path, rpc):
+    rpc("project.create", dir=str(tmp_path), name="P")
+    files = [str(photo(tmp_path / f"{i}.jpg", i)) for i in range(3)]
+    rpc.ids = [a["id"] for a in rpc("project.import", paths=files)["added"]]
+    return rpc
+
+
+@pytest.fixture
+def commits(monkeypatch):
+    calls = []
+    real = Session.commit
+
+    def spy(self):
+        calls.append(1)
+        return real(self)
+
+    monkeypatch.setattr(Session, "commit", spy)
+    return calls
+
+
+def _current_entries(rpc, ids):
+    out = []
+    for i in ids:
+        h = rpc("asset.history", asset=i)
+        out.append(h["entries"][h["cursor"]])
+    return out
+
+
+def test_apply_plan_many_groups_and_saves_once(three, commits):
+    plan = {"source_prompt": "más luz", "operations": [{"op": "exposure", "ev": 0.5}]}
+    commits.clear()
+    res = three("asset.apply_plan_many", assets=three.ids, plan=plan)
+    assert res["group_id"]
+    assert [s["asset"] for s in res["states"]] == three.ids
+    assert all(s["changed"] for s in res["states"])
+    entries = _current_entries(three, three.ids)
+    assert {e["group_id"] for e in entries} == {res["group_id"]}
+    assert {e["label"] for e in entries} == {"Pedido: más luz"}
+    assert len(commits) == 1
+
+
+def test_apply_plan_many_unknown_id_changes_nothing(three, commits):
+    plan = {"operations": [{"op": "exposure", "ev": 0.5}]}
+    commits.clear()
+    a, b = three.ids[0], three.ids[1]
+    err = three.error("asset.apply_plan_many", assets=[a, "nope", b], plan=plan)
+    assert err["code"] == ENGINE_ERROR
+    for i in (a, b):
+        assert three("asset.state", asset=i)["stack"]["operations"] == []
+    assert commits == []
+
+
+def test_apply_plan_many_duplicate_ids_rejected(three, commits):
+    plan = {"operations": [{"op": "exposure", "ev": 0.5}]}
+    commits.clear()
+    a = three.ids[0]
+    err = three.error("asset.apply_plan_many", assets=[a, a], plan=plan)
+    assert err["code"] == INVALID_PARAMS
+    assert three("asset.state", asset=a)["stack"]["operations"] == []
+    assert commits == []
+
+
+def test_apply_plan_many_no_change_has_no_group(three, commits):
+    commits.clear()
+    res = three("asset.apply_plan_many", assets=three.ids, plan={"operations": []})
+    assert res["group_id"] is None
+    assert not any(s["changed"] for s in res["states"])
+    assert commits == []
+
+
+def test_paste_rpc_label_and_group(three):
+    a, b, c = three.ids
+    three("asset.set_stack", asset=b, stack={"operations": [{"op": "rotate", "degrees": 90}]},
+          label="Girar")  # fmt: skip
+    stack = {
+        "operations": [
+            {"op": "crop", "aspect_ratio": "1:1"},
+            {"op": "vibrance", "amount": 20},
+        ]
+    }
+    res = three("asset.paste", assets=[b, c], stack=stack)
+    assert res["group_id"]
+    ops = [[o["op"] for o in s["stack"]["operations"]] for s in res["states"]]
+    assert ops == [["rotate", "vibrance"], ["vibrance"]]  # la geometría de origen no entra
+    entries = _current_entries(three, [b, c])
+    assert {e["label"] for e in entries} == {"Ajustes pegados"}
+    assert {e["group_id"] for e in entries} == {res["group_id"]}
+
+    res = three("asset.paste", assets=[a, b], stack=stack, geometry=True)
+    ops = [[o["op"] for o in s["stack"]["operations"]] for s in res["states"]]
+    assert ops == [["crop", "vibrance"], ["crop", "vibrance"]]
+
+
+def test_undo_group_after_edit(three):
+    plan = {"operations": [{"op": "exposure", "ev": 0.5}]}
+    gid = three("asset.apply_plan_many", assets=three.ids, plan=plan)["group_id"]
+    three("asset.set_stack", asset=three.ids[1], label="Después",
+          stack={"operations": [{"op": "contrast", "amount": 10}]})  # fmt: skip
+    res = three("asset.undo_group", group_id=gid)
+    assert sorted(res["undone"]) == sorted([three.ids[0], three.ids[2]])
+    assert res["skipped"] == [three.ids[1]]
+
+
+def test_auto_ops_stay_auto_in_batch(three):
+    plan = {"operations": [{"op": "auto_exposure"}]}
+    res = three("asset.apply_plan_many", assets=three.ids, plan=plan)
+    for s in res["states"]:
+        assert [o["op"] for o in s["stack"]["operations"]] == ["auto_exposure"]
+
+
+# ------------------------------------------------------------------------------ carpeta de export
+def test_project_info_export_dir_default(tmp_path, rpc):
+    info = rpc("project.create", dir=str(tmp_path), name="P")
+    assert info["export_dir"] == str(Path(info["path"]).parent / "Exportadas")

@@ -34,6 +34,7 @@ CANONICAL_ORDER: tuple[str, ...] = (
     "sharpen",
     "vignette",
 )
+GEOMETRY = frozenset({"crop", "rotate", "straighten"})  # el encuadre es de cada foto
 _RANK = {name: i for i, name in enumerate(CANONICAL_ORDER)}
 
 _AMOUNT = frozenset({"amount"})
@@ -104,3 +105,16 @@ def merge(stack: EditPlan, plan: EditPlan) -> MergeResult:
         current = by_name.get(op.op)
         by_name[op.op] = _add(current, op) if current and op.op in ADDITIVE else op
     return MergeResult(normalize(EditPlan(operations=list(by_name.values()))), hint)
+
+
+def paste(target: EditPlan, source: EditPlan, geometry: bool) -> EditPlan:
+    """Pega los ajustes de `source` sobre `target`: reemplaza, no suma.
+
+    Sin `geometry`, el recorte, la rotación y el enderezado de `target` se conservan y los de
+    `source` se ignoran (cada foto tiene su encuadre).
+    """
+    if geometry:
+        return normalize(source)
+    kept = [op for op in normalize(target).operations if op.op in GEOMETRY]
+    pasted = [op for op in normalize(source).operations if op.op not in GEOMETRY]
+    return normalize(EditPlan(operations=[*kept, *pasted]))
