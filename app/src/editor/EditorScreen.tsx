@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ExportDialog } from "../export/ExportDialog";
-import { isTyping } from "../lib/keys";
+import { adjustShortcut, isTyping } from "../lib/keys";
 import { hasGeometry } from "../lib/stack";
-import { appStore, editorStore, useApp, useEditor } from "../state/store";
+import { appStore, batchStore, editorStore, useApp, useEditor } from "../state/store";
 import { Button, IconButton } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Tooltip } from "../ui/Tooltip";
@@ -18,6 +18,11 @@ const HOLD_MS = 250;
 export function closeEditor() {
   editorStore.getState().close();
   appStore.getState().refreshProject();
+}
+
+/** Pegar los ajustes copiados en la foto abierta (sin recorte ni giro) y volver a leer su pila. */
+async function pasteHere(id: string) {
+  if (await batchStore.getState().paste([id], false)) await editorStore.getState().reload();
 }
 
 /** Editor de una foto: visor a la izquierda, ajustes a la derecha (diseño §7). */
@@ -67,6 +72,16 @@ export function EditorScreen() {
         e.preventDefault();
         if (s.cropping) s.setCropping(false);
         else closeEditor();
+        return;
+      }
+      // Ctrl+Shift+C / V: copiar la pila guardada de esta foto / pegar en ella (Ctrl+Z la deshace).
+      const adjust = adjustShortcut(e);
+      if (adjust === "copy" || adjust === "paste") {
+        e.preventDefault();
+        if (s.asset && !s.asset.missing && s.saved) {
+          if (adjust === "copy") batchStore.getState().copyStack(s.saved.stack, s.asset.file);
+          else void pasteHere(s.asset.id);
+        }
         return;
       }
       const key = e.key.toLowerCase();

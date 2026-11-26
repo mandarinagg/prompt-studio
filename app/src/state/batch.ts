@@ -2,7 +2,7 @@
 // a todas las seleccionadas como un lote. Reproduce ask/answer del editor (incluso ignorar la
 // respuesta tardía de un pedido cancelado), pero sin previews: el plan se revisa como filas.
 import { createStore, type StoreApi } from "zustand/vanilla";
-import type { AssetSummary, call as engineCall } from "../engine/client";
+import type { AssetSummary, EditPlan, call as engineCall } from "../engine/client";
 import { editRowIn, effectivePlan, hasIncluded, rowsOf, toggleRowIn, type PlanState } from "./draft";
 
 export interface BatchApi {
@@ -21,6 +21,12 @@ export interface BatchGroup {
   count: number;
 }
 
+export interface Clipboard {
+  stack: EditPlan;
+  /** De qué foto se copiaron los ajustes. */
+  file: string;
+}
+
 export interface BatchState {
   /** Las fotos del lote, en el orden del proyecto. */
   targets: string[];
@@ -29,6 +35,10 @@ export interface BatchState {
   plan: PlanState | null;
   /** El último lote aplicado (para deshacerlo), null si no hay. */
   lastGroup: BatchGroup | null;
+  /** Se está aplicando el lote: el diálogo no admite más cambios. */
+  applying: boolean;
+  /** Ajustes copiados de una foto (se pierden al cambiar de proyecto). */
+  clipboard: Clipboard | null;
 
   start(targets: string[], assets: AssetSummary[]): void;
   ask(prompt: string): Promise<void>;
@@ -40,6 +50,14 @@ export interface BatchState {
   apply(): Promise<boolean>;
   /** Cierra el pedido; si estaba pensando, la respuesta se ignora. */
   cancel(): void;
+  /** Copia la pila guardada de la foto. */
+  copy(asset: AssetSummary): Promise<void>;
+  /** Copia una pila ya conocida (la guardada del editor, no la del arrastre). */
+  copyStack(stack: EditPlan, file: string): void;
+  /** Pega lo copiado en esas fotos como un lote; true si se pegó. */
+  paste(targets: string[], geometry: boolean): Promise<boolean>;
+  /** Deshace el último lote (solo las fotos que no cambiaron después). */
+  undoLast(): Promise<void>;
   reset(): void;
 }
 
@@ -48,6 +66,8 @@ export function referenceOf(targets: string[], assets: AssetSummary[]): string |
   const wanted = new Set(targets);
   return assets.find((a) => wanted.has(a.id) && !a.missing)?.id ?? null;
 }
+
+const photos = (n: number) => (n === 1 ? "1 foto" : `${n} fotos`);
 
 function tail(err: unknown): string {
   const m = (err instanceof Error ? err.message : String(err)).trim();
@@ -58,13 +78,15 @@ export function createBatchStore(api: BatchApi): StoreApi<BatchState> {
   return createStore<BatchState>()((set, get) => {
     // `gen` invalida respuestas de plan.create tras cancelar, empezar de nuevo o repreguntar.
     let gen = 0;
-    let applying = false;
+    let busy = false;
 
     return {
       targets: [],
       reference: null,
       plan: null,
       lastGroup: null,
+      applying: false,
+      clipboard: null,
 
       start(targets, assets) {
         gen++;
@@ -107,37 +129,106 @@ export function createBatchStore(api: BatchApi): StoreApi<BatchState> {
 
       async apply() {
         const { plan, targets } = get();
-        if (!plan || !hasIncluded(plan) || targets.length === 0 || applying) return false;
-        applying = true;
+        if (!plan || !hasIncluded(plan) || targets.length === 0 || busy) return false;
+        busy = true;
+        set({ applying: true });
         const mine = gen;
+        const label = `Pedido: ${plan.prompt}`.slice(0, 200);
+        let r;
         try {
-          const label = `Pedido: ${plan.prompt}`.slice(0, 200);
-          const r = await api.call("asset.apply_plan_many", {
+          r = await api.call("asset.apply_plan_many", {
             assets: targets as [string, ...string[]],
             plan: effectivePlan(plan),
             label,
           });
-          const changed = r.states.filter((s) => s.changed);
-          for (const s of changed) api.onStackChanged(s.asset);
-          if (r.group_id) {
-            await api.refreshProject();
-            set({ lastGroup: { id: r.group_id, label, count: changed.length } });
-            api.notify("info", `Pedido aplicado a ${targets.length === 1 ? "1 foto" : `${targets.length} fotos`}`);
-          } else {
-            api.notify("info", "No hubo cambios en las fotos");
-          }
-          // Si mientras se aplicaba se canceló o se empezó otro, ese estado no se pisa.
-          if (mine === gen) {
-            gen++;
-            set({ plan: null });
-          }
-          return true;
         } catch (err) {
           api.notify("error", `No se pudo aplicar: ${tail(err)}`);
           return false;
         } finally {
-          applying = false;
+          busy = false;
+          set({ applying: false });
         }
+        // El motor ya guardó: un fallo de la interfaz de acá en adelante no es "no se pudo aplicar".
+        const changed = r.states.filter((s) => s.changed);
+        for (const s of changed) api.onStackChanged(s.asset);
+        if (r.group_id) {
+          set({ lastGroup: { id: r.group_id, label, count: changed.length } });
+          api.notify("info", `Pedido aplicado a ${photos(targets.length)}`);
+          await api.refreshProject().catch(() => {});
+        } else {
+          api.notify("info", "No hubo cambios en las fotos");
+        }
+        // Si mientras se aplicaba se canceló o se empezó otro, ese estado no se pisa.
+        if (mine === gen) {
+          gen++;
+          set({ plan: null });
+        }
+        return true;
+      },
+
+      async copy(asset) {
+        try {
+          const s = await api.call("asset.state", { asset: asset.id });
+          set({ clipboard: { stack: s.stack, file: asset.file } });
+          api.notify("info", `Ajustes de ${asset.file} copiados`);
+        } catch (err) {
+          api.notify("error", `No se pudo copiar: ${tail(err)}`);
+        }
+      },
+
+      copyStack(stack, file) {
+        set({ clipboard: { stack, file } });
+        api.notify("info", `Ajustes de ${file} copiados`);
+      },
+
+      async paste(targets, geometry) {
+        const clipboard = get().clipboard;
+        if (!clipboard || targets.length === 0 || busy) return false;
+        busy = true;
+        let r;
+        try {
+          r = await api.call("asset.paste", {
+            assets: targets as [string, ...string[]],
+            stack: clipboard.stack,
+            geometry,
+          });
+        } catch (err) {
+          api.notify("error", `No se pudo pegar: ${tail(err)}`);
+          return false;
+        } finally {
+          busy = false;
+        }
+        const changed = r.states.filter((s) => s.changed);
+        for (const s of changed) api.onStackChanged(s.asset);
+        if (r.group_id) {
+          set({ lastGroup: { id: r.group_id, label: "Ajustes pegados", count: changed.length } });
+          api.notify("info", `Ajustes pegados en ${photos(changed.length)}`);
+          await api.refreshProject().catch(() => {});
+        } else {
+          api.notify("info", "No hubo cambios en las fotos");
+        }
+        return true;
+      },
+
+      async undoLast() {
+        const group = get().lastGroup;
+        if (!group || busy) return;
+        busy = true;
+        let r;
+        try {
+          r = await api.call("asset.undo_group", { group_id: group.id });
+        } catch (err) {
+          api.notify("error", `No se pudo deshacer: ${tail(err)}`);
+          return;
+        } finally {
+          busy = false;
+        }
+        set({ lastGroup: null });
+        for (const id of r.undone) api.onStackChanged(id);
+        const n = r.skipped.length;
+        const skipped = n === 0 ? "" : n === 1 ? ". 1 cambió después y quedó como estaba" : `. ${n} cambiaron después y quedaron como estaban`;
+        api.notify("info", `Se deshizo «${group.label}» en ${photos(r.undone.length)}${skipped}`);
+        await api.refreshProject().catch(() => {});
       },
 
       cancel() {
@@ -147,7 +238,7 @@ export function createBatchStore(api: BatchApi): StoreApi<BatchState> {
 
       reset() {
         gen++;
-        set({ targets: [], reference: null, plan: null, lastGroup: null });
+        set({ targets: [], reference: null, plan: null, lastGroup: null, clipboard: null });
       },
     };
   });

@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { useThinkingDelay } from "../editor/PlanPanel";
 import { Clarification, PlanNotes, PlanRows } from "../editor/PlanRows";
 import { hasIncluded } from "../state/draft";
 import { batchStore, useApp, useBatch } from "../state/store";
@@ -7,11 +8,22 @@ import { Dialog } from "../ui/Dialog";
 
 const photos = (n: number) => (n === 1 ? "1 foto" : `${n} fotos`);
 
+function ThinkingInline() {
+  const late = useThinkingDelay();
+  if (!late) return null;
+  return (
+    <p className="plan-thinking-inline" role="status">
+      Pensando…
+    </p>
+  );
+}
+
 /** El pedido y el plan; solo está montado mientras el diálogo está abierto. */
 function Body() {
   const id = useId();
   const [text, setText] = useState("");
   const plan = useBatch((s) => s.plan);
+  const applying = useBatch((s) => s.applying);
   const thinking = plan?.status === "thinking";
   const ready = plan?.status === "ready" ? plan : null;
   const question = ready?.result?.plan?.clarification;
@@ -36,18 +48,14 @@ function Body() {
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
             e.preventDefault();
-            if (text.trim() && !thinking) void batchStore.getState().ask(text);
+            if (text.trim() && !thinking && !applying) void batchStore.getState().ask(text);
           }
         }}
       />
       <p id={`${id}-hint`} className="field-hint">
         Enter para pedir · Shift+Enter, otra línea
       </p>
-      {thinking && (
-        <p className="plan-thinking-inline" role="status">
-          Pensando…
-        </p>
-      )}
+      {thinking && <ThinkingInline />}
       {plan?.status === "error" && (
         <p className="field-error" role="alert">
           {plan.error}
@@ -60,6 +68,7 @@ function Body() {
           <PlanRows
             rows={ready.rows}
             showResult={false}
+            disabled={applying}
             onToggle={(i) => batchStore.getState().toggleRow(i)}
             onEdit={(i, v) => batchStore.getState().editRow(i, v)}
           />
@@ -78,6 +87,7 @@ export function BatchPromptDialog({ open, onOpenChange }: { open: boolean; onOpe
   const count = useBatch((s) => s.targets.length);
   const reference = useBatch((s) => s.reference);
   const plan = useBatch((s) => s.plan);
+  const applying = useBatch((s) => s.applying);
   const referenceFile = useApp((s) => s.project?.assets.find((a) => a.id === reference)?.file);
   const canApply = hasIncluded(plan);
 
@@ -94,14 +104,18 @@ export function BatchPromptDialog({ open, onOpenChange }: { open: boolean; onOpe
       open={open}
       onOpenChange={(next) => (next ? onOpenChange(true) : close())}
       title={count === 1 ? "Pedido para la foto" : `Pedido para ${photos(count)}`}
-      description={`Se planifica con ${referenceFile ?? "la primera foto"} y se aplica a todas. Lo automático se ajusta en cada foto.`}
+      description={
+        count === 1
+          ? `Se planifica y se aplica a ${referenceFile ?? "la foto"}. Lo automático se ajusta a la foto.`
+          : `Se planifica con ${referenceFile ?? "la primera foto"} y se aplica a todas. Lo automático se ajusta en cada foto.`
+      }
       footer={
         <>
           <Button variant="quiet" onClick={close}>
             Cancelar
           </Button>
-          <Button variant="primary" disabled={!canApply} onClick={() => void apply()}>
-            {count === 1 ? "Aplicar a la foto" : `Aplicar a las ${count}`}
+          <Button variant="primary" disabled={!canApply || applying} onClick={() => void apply()}>
+            {applying ? "Aplicando…" : count === 1 ? "Aplicar a la foto" : `Aplicar a las ${count}`}
           </Button>
         </>
       }

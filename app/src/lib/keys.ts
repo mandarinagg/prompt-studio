@@ -10,3 +10,11 @@ export function isTyping(target: EventTarget | null): boolean {
 export function isExportShortcut(e: KeyboardEvent): boolean {
   return e.ctrlKey && !e.altKey && !e.metaKey && !e.repeat && e.key.toLowerCase() === "e" && !isTyping(e.target);
 }
+
+/** Copiar (Ctrl+Shift+C), pegar (Ctrl+Shift+V) y deshacer (Ctrl+Z) ajustes: no mientras se escribe ni con la tecla mantenida. */
+export function adjustShortcut(e: KeyboardEvent): "copy" | "paste" | "undo" | null {
+  if (!e.ctrlKey || e.altKey || e.metaKey || e.repeat || isTyping(e.target)) return null;
+  const key = e.key.toLowerCase();
+  if (e.shiftKey) return key === "c" ? "copy" : key === "v" ? "paste" : null;
+  return key === "z" ? "undo" : null;
+}

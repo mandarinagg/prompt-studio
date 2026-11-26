@@ -8,14 +8,20 @@ import { Clarification, PlanNotes, PlanRows, resizeText } from "./PlanRows";
 export { resizeText };
 
 /** Con reglas el plan llega en pocos ms: "Pensando…" solo si tarda más (no parpadea). */
-const THINKING_DELAY_MS = 150;
+export const THINKING_DELAY_MS = 150;
 
-function Thinking() {
+/** true recién pasado el retardo desde que se montó el componente que lo usa. */
+export function useThinkingDelay(): boolean {
   const [late, setLate] = useState(false);
   useEffect(() => {
     const t = window.setTimeout(() => setLate(true), THINKING_DELAY_MS);
     return () => window.clearTimeout(t);
   }, []);
+  return late;
+}
+
+function Thinking() {
+  const late = useThinkingDelay();
   if (!late) return null;
   return (
     <div className="plan-thinking" role="status">
