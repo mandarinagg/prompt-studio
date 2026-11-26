@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { type AssetSummary, EngineError, type Method } from "../engine/client";
-import { clear, createLibraryStore, type LibraryApi, MAX_IN_FLIGHT, prune, select, selectAll } from "./library";
+import {
+  clear,
+  createLibraryStore,
+  type LibraryApi,
+  MAX_IN_FLIGHT,
+  moveFocusIndex,
+  prune,
+  select,
+  selectAll,
+} from "./library";
 
 const ORDER = ["a", "b", "c", "d", "e"];
 const none = { selected: [], anchor: null, focus: null };
@@ -402,5 +411,38 @@ describe("store de la biblioteca: miniaturas", () => {
     expect(t.gets.map((g) => g.asset).at(-1)).toBe("f8");
     expect(t.gets).toHaveLength(MAX_IN_FLIGHT);
     expect(t.gets.map((g) => g.asset).filter((x) => x === "f7")).toHaveLength(1);
+  });
+});
+
+describe("moveFocusIndex", () => {
+  // 7 fotos en 3 columnas:  0 1 2 / 3 4 5 / 6
+  it("izquierda y derecha avanzan de a una y se detienen en los bordes", () => {
+    expect(moveFocusIndex(1, "ArrowRight", 3, 7)).toBe(2);
+    expect(moveFocusIndex(1, "ArrowLeft", 3, 7)).toBe(0);
+    expect(moveFocusIndex(0, "ArrowLeft", 3, 7)).toBe(0);
+    expect(moveFocusIndex(6, "ArrowRight", 3, 7)).toBe(6);
+  });
+
+  it("arriba y abajo saltan una fila según las columnas", () => {
+    expect(moveFocusIndex(1, "ArrowDown", 3, 7)).toBe(4);
+    expect(moveFocusIndex(4, "ArrowUp", 3, 7)).toBe(1);
+    expect(moveFocusIndex(1, "ArrowUp", 3, 7)).toBe(1);
+  });
+
+  it("abajo en la última fila corta va a la última foto; en una fila completa no se mueve", () => {
+    expect(moveFocusIndex(4, "ArrowDown", 3, 7)).toBe(6);
+    expect(moveFocusIndex(6, "ArrowDown", 3, 7)).toBe(6);
+    expect(moveFocusIndex(5, "ArrowDown", 3, 6)).toBe(5);
+  });
+
+  it("Inicio y Fin van a la primera y la última", () => {
+    expect(moveFocusIndex(4, "Home", 3, 7)).toBe(0);
+    expect(moveFocusIndex(2, "End", 3, 7)).toBe(6);
+  });
+
+  it("columnas inválidas cuentan como una y otras teclas no mueven", () => {
+    expect(moveFocusIndex(1, "ArrowDown", 0, 4)).toBe(2);
+    expect(moveFocusIndex(1, "a", 3, 7)).toBe(1);
+    expect(moveFocusIndex(0, "ArrowRight", 3, 0)).toBe(0);
   });
 });

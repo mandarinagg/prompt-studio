@@ -72,6 +72,33 @@ export function prune(sel: Selection, ids: string[]): Selection {
   return { selected, anchor, focus };
 }
 
+/**
+ * Flechas, Inicio y Fin en la cuadrícula: el índice al que va el foco. `columns` son las columnas
+ * reales (medidas del DOM). ↓ desde una fila más corta abajo va a la última foto.
+ */
+export function moveFocusIndex(index: number, key: string, columns: number, count: number): number {
+  if (count <= 0) return index;
+  const cols = Math.max(1, Math.floor(columns) || 1);
+  const last = count - 1;
+  switch (key) {
+    case "ArrowLeft":
+      return Math.max(0, index - 1);
+    case "ArrowRight":
+      return Math.min(last, index + 1);
+    case "ArrowUp":
+      return index - cols >= 0 ? index - cols : index;
+    case "ArrowDown":
+      if (index + cols <= last) return index + cols;
+      return Math.floor(index / cols) < Math.floor(last / cols) ? last : index;
+    case "Home":
+      return 0;
+    case "End":
+      return last;
+    default:
+      return index;
+  }
+}
+
 // ---------------------------------------------------------------------------- store
 
 export type ThumbStatus = "idle" | "loading" | "ready" | "error";
