@@ -33,7 +33,7 @@ async function relink(id: string) {
  * La cuadrícula de fotos del proyecto. ARIA: `listbox` de selección múltiple con una `option` por
  * foto y foco móvil (roving tabindex): una sola foto entra con Tab y las flechas mueven el foco.
  */
-export function LibraryGrid() {
+export function LibraryGrid({ onExport }: { onExport(): void }) {
   const assets = useApp((s) => s.project?.assets);
   const list = useMemo(() => assets ?? [], [assets]);
   const thumbs = useLibrary((s) => s.thumbs);
@@ -139,6 +139,7 @@ export function LibraryGrid() {
           count={selected.length}
           canEdit={!!first && !first.missing}
           onEdit={() => first && openAsset(first.id)}
+          onExport={onExport}
           onClear={() => libraryStore.getState().clear()}
         />
       )}

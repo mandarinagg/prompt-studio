@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { ExportDialog } from "../export/ExportDialog";
 import { hasGeometry } from "../lib/stack";
 import { appStore, editorStore, useApp, useEditor } from "../state/store";
 import { Button, IconButton } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Tooltip } from "../ui/Tooltip";
 import { AdjustPanel } from "./AdjustPanel";
-import { ExportDialog } from "./ExportDialog";
 import { Filmstrip } from "./Filmstrip";
 import { PlanPanel } from "./PlanPanel";
 import { focusPrompt, PromptBox } from "./PromptBox";
@@ -29,6 +29,8 @@ export function EditorScreen() {
   const asset = useEditor((s) => s.asset)!;
   const saved = useEditor((s) => s.saved);
   const geometry = useEditor((s) => hasGeometry(s.stack));
+  const exportHint = useEditor((s) => s.exportHint);
+  const pendingPlan = useEditor((s) => s.plan !== null);
   const assets = useApp((s) => s.project?.assets ?? []);
   const [holdBefore, setHoldBefore] = useState(false);
   const [split, setSplit] = useState(false);
@@ -57,6 +59,8 @@ export function EditorScreen() {
       if (isTyping(e.target)) return; // Esc en un campo lo maneja el campo (cancela lo escrito)
       // Con un diálogo abierto (export) los atajos del editor no corren: el diálogo maneja Esc.
       if (document.querySelector("[role=dialog]")) return;
+      // En la cola de exports, las flechas y Esc son de la cola.
+      if ((e.target as HTMLElement | null)?.closest?.(".queue")) return;
       // `\` va antes que los modificadores: en teclados en español se escribe con AltGr (Ctrl+Alt).
       if (isBackslash(e)) {
         e.preventDefault();
@@ -183,7 +187,13 @@ export function EditorScreen() {
           Exportar…
         </Button>
       </header>
-      <ExportDialog key={asset.id} open={exporting} onOpenChange={setExporting} />
+      <ExportDialog
+        open={exporting}
+        onOpenChange={setExporting}
+        assets={[asset]}
+        hint={exportHint}
+        pendingPlan={pendingPlan}
+      />
       <div className="editor-body">
         <Viewer holdBefore={holdBefore} split={split} />
         <aside className="panel" aria-label="Pedido y ajustes de la foto">

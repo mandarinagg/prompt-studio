@@ -1,10 +1,12 @@
 import { open } from "@tauri-apps/plugin-dialog";
+import { useEffect, useMemo, useState } from "react";
+import { ExportDialog } from "../export/ExportDialog";
 import { IMAGE_FILTER, LibraryGrid } from "../library/LibraryGrid";
-import { useApp } from "../state/store";
+import { useApp, useLibrary } from "../state/store";
 import { Button, IconButton } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 
-/** Proyecto abierto: barra superior con importar y la biblioteca de fotos (cuadrícula con miniaturas). */
+/** Proyecto abierto: barra superior con importar y exportar, y la biblioteca de fotos (cuadrícula con miniaturas). */
 export function ProjectScreen({ dragging }: { dragging: boolean }) {
   const project = useApp((s) => s.project)!;
   const close = useApp((s) => s.closeProject);
@@ -12,6 +14,25 @@ export function ProjectScreen({ dragging }: { dragging: boolean }) {
   const importPhotos = useApp((s) => s.importPhotos);
   const count = project.assets.length;
   const missing = project.assets.filter((a) => a.missing).length;
+  const selected = useLibrary((s) => s.selected);
+  const [exporting, setExporting] = useState(false);
+  // Las seleccionadas en el orden de la cuadrícula (así se exportan).
+  const toExport = useMemo(() => {
+    const ids = new Set(selected);
+    return project.assets.filter((a) => ids.has(a.id));
+  }, [project.assets, selected]);
+
+  // Ctrl+E: exportar la selección (con un diálogo abierto, el diálogo manda).
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || e.altKey || e.key.toLowerCase() !== "e") return;
+      if (document.querySelector("[role=dialog]") || toExport.length === 0) return;
+      e.preventDefault();
+      setExporting(true);
+    };
+    window.addEventListener("keydown", down);
+    return () => window.removeEventListener("keydown", down);
+  }, [toExport.length]);
 
   const pickPhotos = async () => {
     const picked = await open({ multiple: true, title: "Importar fotos", filters: IMAGE_FILTER });
@@ -40,7 +61,17 @@ export function ProjectScreen({ dragging }: { dragging: boolean }) {
         <Button variant="secondary" icon="folder" disabled={busy} onClick={pickFolder}>
           Importar carpeta…
         </Button>
+        <Button
+          variant="secondary"
+          shortcut="Ctrl+E"
+          disabled={toExport.length === 0}
+          title={toExport.length === 0 ? "Seleccioná las fotos que quieras exportar" : undefined}
+          onClick={() => setExporting(true)}
+        >
+          {toExport.length === 0 ? "Exportar…" : `Exportar ${toExport.length}…`}
+        </Button>
       </header>
+      <ExportDialog open={exporting} onOpenChange={setExporting} assets={toExport} />
 
       <main className={`project-body ${dragging ? "is-dragging" : ""}`}>
         {count === 0 ? (
@@ -53,7 +84,7 @@ export function ProjectScreen({ dragging }: { dragging: boolean }) {
             </Button>
           </div>
         ) : (
-          <LibraryGrid />
+          <LibraryGrid onExport={() => setExporting(true)} />
         )}
         {dragging && <p className="drop-hint">Soltalas para agregarlas a {project.name}</p>}
       </main>

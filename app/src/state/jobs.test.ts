@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EngineError, type JobInfo, type Method } from "../engine/client";
-import { createJobsStore, type JobsApi } from "./jobs";
+import { createJobsStore, exportable, queueLabel, type JobsApi } from "./jobs";
 
 const OUT = "C:/fotos/Viaje.pstudio/../Exportadas";
 
@@ -21,8 +21,9 @@ const info = (over: Partial<JobInfo> = {}): JobInfo => ({
 
 const ok = (asset: string, file: string) => ({ asset, path: `${OUT}/${file}`, error: null });
 
-function fakeApi(handlers: Partial<Record<Method, (params: any) => unknown>> = {}) {
+function fakeApi(handlers: Partial<Record<Method, (params: any) => unknown>> = {}, openFolder?: (path: string) => Promise<void>) {
   const calls: { method: Method; params: any }[] = [];
+  const opened: string[] = [];
   const notes: { kind: string; text: string }[] = [];
   const api: JobsApi = {
     call: (async (method: Method, params?: unknown) => {
@@ -32,19 +33,23 @@ function fakeApi(handlers: Partial<Record<Method, (params: any) => unknown>> = {
       return h(params);
     }) as JobsApi["call"],
     notify: (kind, text) => notes.push({ kind, text }),
+    openFolder: async (path) => {
+      opened.push(path);
+      if (openFolder) await openFolder(path);
+    },
   };
-  return { api, calls, notes };
+  return { api, calls, notes, opened };
 }
 
 describe("store de trabajos", () => {
-  it("exportar encola el job y lo recuerda para cada foto", async () => {
+  it("exportar encola el job", async () => {
     const f = fakeApi({ "job.export": () => info({ total: 2 }) });
     const store = createJobsStore(f.api);
     const job = await store.getState().submitExport(["a1", "a2"], "web");
     expect(f.calls).toEqual([{ method: "job.export", params: { assets: ["a1", "a2"], preset: "web" } }]);
     expect(job.status).toBe("queued");
     expect(store.getState().jobs.j1.status).toBe("queued");
-    expect(store.getState().byAsset).toEqual({ a1: "j1", a2: "j1" });
+    expect(store.getState().presets.j1).toBe("web");
   });
 
   it("el progreso avanza y nunca retrocede", () => {
@@ -79,7 +84,6 @@ describe("store de trabajos", () => {
     const job = await store.getState().submitExport(["a1"], "web");
     expect(job.status).toBe("done");
     expect(store.getState().jobs.j1.status).toBe("done");
-    expect(store.getState().byAsset.a1).toBe("j1");
     expect(f.notes).toEqual([{ kind: "info", text: `Exportada: foto.jpg (en ${OUT})` }]);
   });
 
@@ -191,5 +195,69 @@ describe("store de trabajos", () => {
     expect(f.notes).toEqual([{ kind: "error", text: "No se pudieron terminar 2 exports: el motor se reinició." }]);
     s.onEvent("job.progress", info({ id: "j1", status: "running", fraction: 0.8 }));
     expect(store.getState().jobs.j1.status).toBe("failed");
+  });
+  it("order lists newest first and dismiss removes only finished jobs", async () => {
+    let n = 0;
+    const f = fakeApi({ "job.export": () => info({ id: `j${++n}` }) });
+    const store = createJobsStore(f.api);
+    await store.getState().submitExport(["a1"], "web");
+    await store.getState().submitExport(["a2"], "original");
+    store.getState().onEvent("job.progress", info({ id: "j3", status: "running" })); // visto primero por un evento
+    expect(store.getState().order).toEqual(["j3", "j2", "j1"]);
+    store.getState().onEvent("job.done", info({ id: "j1", status: "done", done: 1, fraction: 1, results: [ok("a1", "a.jpg")] }));
+    store.getState().dismiss("j2"); // todavía en cola: no se quita
+    store.getState().dismiss("j1");
+    expect(store.getState().order).toEqual(["j3", "j2"]);
+    expect(store.getState().jobs.j1).toBeUndefined();
+    expect(store.getState().presets.j1).toBeUndefined();
+    // Un aviso repetido de un job ya quitado no lo vuelve a mostrar ni a avisar.
+    f.notes.length = 0;
+    store.getState().onEvent("job.done", info({ id: "j1", status: "done", done: 1, fraction: 1 }));
+    expect(store.getState().order).toEqual(["j3", "j2"]);
+    expect(f.notes).toEqual([]);
+  });
+
+  it("submitExport passes out_dir when given", async () => {
+    const f = fakeApi({ "job.export": () => info() });
+    const store = createJobsStore(f.api);
+    await store.getState().submitExport(["a1", "a2"], "catalog_square", "D:/Entregas");
+    expect(f.calls).toEqual([
+      { method: "job.export", params: { assets: ["a1", "a2"], preset: "catalog_square", out_dir: "D:/Entregas" } },
+    ]);
+  });
+
+  it("exportable excludes missing and counts them", () => {
+    const a = (id: string, missing = false) => ({ id, file: `${id}.jpg`, edited: false, missing });
+    expect(exportable([a("a"), a("b", true), a("c"), a("d", true)])).toEqual({ ids: ["a", "c"], missing: 2 });
+    expect(exportable([])).toEqual({ ids: [], missing: 0 });
+  });
+
+  it("openFolder opens the job folder", async () => {
+    const f = fakeApi();
+    const store = createJobsStore(f.api);
+    store.getState().onEvent("job.done", info({ status: "done", done: 1, fraction: 1, results: [ok("a1", "a.jpg")] }));
+    await store.getState().openFolder("j1");
+    expect(f.opened).toEqual([OUT]);
+  });
+
+  it("openFolder failure notifies a readable error", async () => {
+    const f = fakeApi({}, async () => {
+      throw new EngineError("la carpeta ya no existe", null);
+    });
+    const store = createJobsStore(f.api);
+    store.getState().onEvent("job.done", info({ status: "done", done: 1, fraction: 1, results: [ok("a1", "a.jpg")] }));
+    f.notes.length = 0;
+    await store.getState().openFolder("j1");
+    expect(f.notes).toEqual([{ kind: "error", text: "No se pudo abrir la carpeta: la carpeta ya no existe." }]);
+  });
+
+  it("queueLabel: avance de lo que corre o cuántos terminaron", () => {
+    const run = info({ id: "j1", status: "running", total: 8, done: 1 });
+    const queued = info({ id: "j2", status: "queued", total: 2 });
+    const fin = info({ id: "j3", status: "done", total: 1, done: 1 });
+    expect(queueLabel([run, fin])).toBe("Exportando 2/8");
+    expect(queueLabel([run, queued, fin])).toBe("Exportando 2/10");
+    expect(queueLabel([info({ status: "running", total: 3, done: 3 })])).toBe("Exportando 3/3");
+    expect(queueLabel([fin, { ...fin, id: "j4" }])).toBe("Exportes terminados (2)");
   });
 });

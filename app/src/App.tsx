@@ -6,10 +6,11 @@ import { maybeRunBench } from "./dev/bench";
 import { onEngineEvent, onEngineFailed, onEngineRestarted } from "./engine/client";
 import { classifyDrop, isProjectPath, projectFolder } from "./lib/paths";
 import { EditorScreen } from "./editor/EditorScreen";
+import { QueueDrawer } from "./export/QueueDrawer";
 import { NewProjectDialog } from "./screens/NewProjectDialog";
 import { ProjectScreen } from "./screens/ProjectScreen";
 import { StartScreen } from "./screens/StartScreen";
-import { appStore, editorStore, jobsStore, libraryStore, useApp, useEditor } from "./state/store";
+import { appStore, editorStore, jobsStore, libraryStore, useApp, useEditor, useLibrary } from "./state/store";
 import { Icon } from "./ui/Icon";
 import { Toasts } from "./ui/Toasts";
 import { TooltipProvider } from "./ui/Tooltip";
@@ -56,6 +57,7 @@ export default function App() {
   const project = useApp((s) => s.project);
   const editing = useEditor((s) => s.asset !== null);
   const hasDraft = useApp((s) => s.draft !== null);
+  const selecting = useLibrary((s) => s.selected.length > 0);
   const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
@@ -133,7 +135,11 @@ export default function App() {
         )}
       </div>
       <NewProjectDialog />
-      <Toasts />
+      {/* Abajo a la derecha, por encima de la barra de selección o de la tira del editor. */}
+      <div className="dock" data-place={project && editing ? "editor" : project && selecting ? "selection" : undefined}>
+        <Toasts />
+        {project && <QueueDrawer />}
+      </div>
     </TooltipProvider>
   );
 }

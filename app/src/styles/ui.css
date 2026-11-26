@@ -185,14 +185,13 @@
 }
 
 /* ---- Avisos ---- */
+/* Dentro de `.dock` (screens.css), arriba de la cola de exports. */
 .toasts {
-  position: fixed;
-  right: var(--sp-4);
-  bottom: var(--sp-4);
   display: grid;
   gap: var(--sp-2);
-  width: min(380px, calc(100vw - 32px));
-  z-index: 30;
+}
+.toasts:empty {
+  display: none;
 }
 .toast {
   display: grid;

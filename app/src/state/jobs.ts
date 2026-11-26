@@ -1,13 +1,15 @@
-// Trabajos largos del engine (#60): por ahora, exports. Se alimenta de los eventos `job.*` y de
-// las respuestas de `job.export` / `job.cancel`, que pueden llegar en cualquier orden: el estado
-// de un job nunca retrocede. Al terminar cada job avisa con un toast, haya o no un diálogo
-// abierto. Recibe el cliente del engine por parámetro para poder probarlo sin Tauri.
+// Trabajos largos del engine (#60, #62): por ahora, exports. Se alimenta de los eventos `job.*` y
+// de las respuestas de `job.export` / `job.cancel`, que pueden llegar en cualquier orden: el
+// estado de un job nunca retrocede. Al terminar cada job avisa con un toast, esté o no abierta la
+// cola. Recibe el cliente del engine por parámetro para poder probarlo sin Tauri.
 import { createStore, type StoreApi } from "zustand/vanilla";
-import type { call as engineCall, JobExportParams, JobInfo } from "../engine/client";
+import type { AssetSummary, call as engineCall, JobExportParams, JobInfo } from "../engine/client";
 
 export interface JobsApi {
   call: typeof engineCall;
   notify(kind: "info" | "error", text: string): void;
+  /** Abre la carpeta en el Explorador (Rust solo abre carpetas de exports). */
+  openFolder(path: string): Promise<void>;
 }
 
 export type JobEvent = "job.progress" | "job.done" | "job.failed";
@@ -15,11 +17,17 @@ export type ExportPreset = NonNullable<JobExportParams["preset"]>;
 
 export interface JobsState {
   jobs: Record<string, JobInfo>;
-  /** Por foto, el último job que la exporta (para que el diálogo muestre su progreso). */
-  byAsset: Record<string, string>;
+  /** Ids de los jobs de la cola, el más nuevo primero. */
+  order: string[];
+  /** El preset de cada job pedido desde acá (el engine no lo devuelve). */
+  presets: Record<string, ExportPreset>;
 
-  submitExport(assets: [string, ...string[]], preset?: ExportPreset): Promise<JobInfo>;
+  submitExport(assets: [string, ...string[]], preset?: ExportPreset, outDir?: string): Promise<JobInfo>;
   cancel(id: string): Promise<void>;
+  /** Saca de la cola un job terminado (uno que sigue corriendo no se quita). */
+  dismiss(id: string): void;
+  /** Abre la carpeta donde exportó el job; si no se puede, avisa. */
+  openFolder(id: string): Promise<void>;
   onEvent(method: JobEvent, params: JobInfo): void;
   /** El motor se reinició o se cayó: lo que esperaba o corría no va a terminar. */
   onEngineLost(reason: string): void;
@@ -39,6 +47,21 @@ function isNewer(prev: JobInfo | undefined, next: JobInfo): boolean {
   const b = RANK[next.status];
   if (b !== a) return b > a;
   return next.fraction >= prev.fraction && next.done >= prev.done;
+}
+
+/** Las fotos que se pueden exportar (las que no se encuentran se saltean) y cuántas faltan. */
+export function exportable(assets: AssetSummary[]): { ids: string[]; missing: number } {
+  const ids = assets.filter((a) => !a.missing).map((a) => a.id);
+  return { ids, missing: assets.length - ids.length };
+}
+
+/** El resumen del botón de la cola: "Exportando 2/8" o "Exportes terminados (3)". */
+export function queueLabel(jobs: JobInfo[]): string {
+  const pending = jobs.filter((j) => !isFinished(j));
+  if (pending.length === 0) return `Exportes terminados (${jobs.length})`;
+  const total = pending.reduce((n, j) => n + j.total, 0);
+  const done = pending.reduce((n, j) => n + j.done, 0);
+  return `Exportando ${Math.min(done + 1, total)}/${total}`;
 }
 
 function fileName(path: string): string {
@@ -76,11 +99,15 @@ export function summary(job: JobInfo): { kind: "info" | "error"; text: string } 
 
 export function createJobsStore(api: JobsApi): StoreApi<JobsState> {
   return createStore<JobsState>()((set, get) => {
+    /** Los quitados de la cola: un aviso tardío no los vuelve a mostrar. */
+    const dismissed = new Set<string>();
+
     /** Guarda `next` si es más nuevo; al pasar a terminado, avisa (una sola vez por job). */
     const merge = (next: JobInfo): JobInfo => {
+      if (dismissed.has(next.id)) return next;
       const prev = get().jobs[next.id];
       if (!isNewer(prev, next)) return prev;
-      set({ jobs: { ...get().jobs, [next.id]: next } });
+      set({ jobs: { ...get().jobs, [next.id]: next }, order: prev ? get().order : [next.id, ...get().order] });
       if (isFinished(next)) {
         const s = summary(next);
         api.notify(s.kind, s.text);
@@ -90,14 +117,13 @@ export function createJobsStore(api: JobsApi): StoreApi<JobsState> {
 
     return {
       jobs: {},
-      byAsset: {},
+      order: [],
+      presets: {},
 
-      async submitExport(assets, preset) {
-        const params: JobExportParams = preset ? { assets, preset } : { assets };
+      async submitExport(assets, preset, outDir) {
+        const params: JobExportParams = { assets, ...(preset && { preset }), ...(outDir && { out_dir: outDir }) };
         const queued = await api.call("job.export", params);
-        const byAsset = { ...get().byAsset };
-        for (const a of assets) byAsset[a] = queued.id;
-        set({ byAsset });
+        set({ presets: { ...get().presets, [queued.id]: preset ?? "web" } }); // "web": el del engine
         return merge(queued);
       },
 
@@ -106,6 +132,25 @@ export function createJobsStore(api: JobsApi): StoreApi<JobsState> {
           merge(await api.call("job.cancel", { job: id }));
         } catch (err) {
           api.notify("error", `No se pudo cancelar: ${messageOf(err)}`);
+        }
+      },
+
+      dismiss(id) {
+        const job = get().jobs[id];
+        if (!job || !isFinished(job)) return;
+        dismissed.add(id);
+        const { [id]: _job, ...jobs } = get().jobs;
+        const { [id]: _preset, ...presets } = get().presets;
+        set({ jobs, presets, order: get().order.filter((x) => x !== id) });
+      },
+
+      async openFolder(id) {
+        const job = get().jobs[id];
+        if (!job) return;
+        try {
+          await api.openFolder(job.out_dir);
+        } catch (err) {
+          api.notify("error", `No se pudo abrir la carpeta: ${messageOf(err)}`);
         }
       },
 

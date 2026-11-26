@@ -2,7 +2,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { documentDir } from "@tauri-apps/api/path";
 import { useStore } from "zustand";
-import { cacheImage, call } from "../engine/client";
+import { cacheImage, call, EngineError } from "../engine/client";
 import { createAppStore, type AppState } from "./app";
 import { createEditorStore, type EditorState } from "./editor";
 import { createJobsStore, type JobsState } from "./jobs";
@@ -35,6 +35,15 @@ export function useEditor<T>(selector: (s: EditorState) => T): T {
 export const jobsStore = createJobsStore({
   call,
   notify: (kind, text) => appStore.getState().notify(kind, text),
+  openFolder: async (path) => {
+    try {
+      await invoke("open_folder", { path });
+    } catch (err) {
+      // Rust rechaza con `{message, code}`: que el aviso diga el motivo, no "[object Object]".
+      const e = err as { message?: string; code?: number | null };
+      throw new EngineError(e.message ?? String(err), e.code ?? null);
+    }
+  },
 });
 
 export function useJobs<T>(selector: (s: JobsState) => T): T {

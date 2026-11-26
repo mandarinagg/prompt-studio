@@ -1,5 +1,6 @@
 mod engine;
 
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
@@ -31,6 +32,8 @@ struct AppState {
     /// el evento `engine-failed` salió antes de que escuchara).
     failure: Mutex<Option<String>>,
     metrics: Mutex<Metrics>,
+    /// Carpetas donde exportó algún job (canónicas): las únicas que `open_folder` abre.
+    export_dirs: Mutex<HashSet<PathBuf>>,
 }
 
 fn elapsed_ms() -> f64 {
@@ -59,6 +62,15 @@ fn start_engine(app: &AppHandle) -> std::io::Result<Arc<Engine>> {
         .expect("comando del engine");
     let events = app.clone();
     let on_event: OnEvent = Arc::new(move |msg: Value| {
+        if msg["method"]
+            .as_str()
+            .is_some_and(|m| m.starts_with("job."))
+            && let Some(dir) = msg["params"]["out_dir"].as_str()
+            && let Ok(dir) = std::fs::canonicalize(dir)
+        {
+            let state = events.state::<AppState>();
+            state.export_dirs.lock().unwrap().insert(dir);
+        }
         let payload = json!({"method": msg["method"], "params": msg.get("params").cloned().unwrap_or(json!({}))});
         let _ = events.emit("engine-event", payload);
     });
@@ -177,6 +189,52 @@ async fn read_cache(
         .map_err(|e| local_error(format!("no se pudo leer la caché: {e}")))
 }
 
+/// La ruta canónica de `path`; si ya no existe, la de su carpeta padre más el nombre (así se
+/// reconoce una carpeta conocida que se borró).
+fn canonical_or_parent(path: &Path) -> Option<PathBuf> {
+    if let Ok(p) = std::fs::canonicalize(path) {
+        return Some(p);
+    }
+    let name = path.file_name()?;
+    Some(std::fs::canonicalize(path.parent()?).ok()?.join(name))
+}
+
+/// La carpeta pedida, solo si es una donde exportó algún job (comparando rutas canónicas) y
+/// todavía existe: la UI no puede abrir cualquier carpeta del equipo.
+fn allowed_folder(known: &HashSet<PathBuf>, path: &Path) -> Result<PathBuf, EngineError> {
+    let canonical = canonical_or_parent(path)
+        .filter(|p| known.contains(p))
+        .ok_or_else(|| local_error("solo se pueden abrir carpetas de exports"))?;
+    if !canonical.is_dir() {
+        return Err(local_error("la carpeta ya no existe"));
+    }
+    Ok(canonical)
+}
+
+/// `canonicalize` en Windows devuelve rutas `\\?\…`, que el Explorador no entiende.
+fn explorer_path(path: &Path) -> PathBuf {
+    let s = path.to_string_lossy();
+    if let Some(unc) = s.strip_prefix(r"\\?\UNC\") {
+        PathBuf::from(format!(r"\\{unc}"))
+    } else if let Some(local) = s.strip_prefix(r"\\?\") {
+        PathBuf::from(local)
+    } else {
+        path.to_path_buf()
+    }
+}
+
+/// Abre en el Explorador una carpeta de exports (botón "Abrir carpeta" de la cola).
+#[tauri::command]
+fn open_folder(state: tauri::State<'_, AppState>, path: String) -> Result<(), EngineError> {
+    let dir = allowed_folder(&state.export_dirs.lock().unwrap(), Path::new(&path))?;
+    // No se espera el código de salida: explorer.exe devuelve 1 aun cuando abre bien.
+    std::process::Command::new("explorer.exe")
+        .arg(explorer_path(&dir))
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| local_error(format!("no se pudo abrir el Explorador: {e}")))
+}
+
 #[tauri::command]
 fn engine_failure(state: tauri::State<'_, AppState>) -> Option<String> {
     state.failure.lock().unwrap().clone()
@@ -246,6 +304,7 @@ pub fn run() {
             cache_dir: Mutex::new(None),
             failure: Mutex::new(None),
             metrics: Mutex::new(Metrics::default()),
+            export_dirs: Mutex::new(HashSet::new()),
         })
         .setup(|app| {
             let state = app.state::<AppState>();
@@ -274,6 +333,7 @@ pub fn run() {
             engine_failure,
             startup_metrics,
             read_cache,
+            open_folder,
             bench_config,
             bench_report
         ])
@@ -317,5 +377,47 @@ mod tests {
         assert!(resolve_cache_file(None, &cache.join("preview").join("a-1.jpg")).is_err());
         assert!(resolve_cache_file(Some(&cache), &cache.join("nada.jpg")).is_err());
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn allowed_folder_rejects_unknown_and_missing() {
+        let root = std::env::temp_dir().join(format!("pstudio-export-test-{}", std::process::id()));
+        let known_dir = root.join("Exportadas");
+        let other = root.join("Otra");
+        std::fs::create_dir_all(&known_dir).unwrap();
+        std::fs::create_dir_all(&other).unwrap();
+        let canonical = std::fs::canonicalize(&known_dir).unwrap();
+        let known: HashSet<PathBuf> = [canonical.clone()].into();
+
+        let err = allowed_folder(&known, &other).unwrap_err();
+        assert_eq!(err.message, "solo se pueden abrir carpetas de exports");
+        let err = allowed_folder(&known, &root.join("Nada")).unwrap_err();
+        assert_eq!(err.message, "solo se pueden abrir carpetas de exports");
+
+        // La misma carpeta escrita con `..` también vale: se compara la ruta canónica.
+        let roundabout = other.join("..").join("Exportadas");
+        assert_eq!(allowed_folder(&known, &roundabout).unwrap(), canonical);
+        assert_eq!(allowed_folder(&known, &known_dir).unwrap(), canonical);
+
+        std::fs::remove_dir_all(&known_dir).unwrap();
+        let err = allowed_folder(&known, &known_dir).unwrap_err();
+        assert_eq!(err.message, "la carpeta ya no existe");
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn explorer_path_drops_the_verbatim_prefix() {
+        assert_eq!(
+            explorer_path(Path::new(r"\\?\C:\fotos\Exportadas")),
+            PathBuf::from(r"C:\fotos\Exportadas")
+        );
+        assert_eq!(
+            explorer_path(Path::new(r"\\?\UNC\nas\fotos")),
+            PathBuf::from(r"\\nas\fotos")
+        );
+        assert_eq!(
+            explorer_path(Path::new(r"C:\fotos")),
+            PathBuf::from(r"C:\fotos")
+        );
     }
 }
