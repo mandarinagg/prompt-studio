@@ -14,6 +14,11 @@ export interface EditorApi {
   revoke(url: string): void;
   notify(kind: "info" | "error", text: string): void;
   pixelRatio(): number;
+  /**
+   * La pila guardada de la foto cambió (guardar, deshacer, rehacer, restablecer, aplicar un plan):
+   * la biblioteca vuelve a pedir su miniatura. No se llama con las previews mientras se arrastra.
+   */
+  onStackChanged(asset: string): void;
 }
 
 /** Mientras se arrastra (diseño §8: ≈1024 px de lado largo en < 100 ms). */
@@ -218,6 +223,7 @@ export function createEditorStore(api: EditorApi): StoreApi<EditorState> {
       if (!asset) return;
       try {
         const s = await api.call(method, { asset: asset.id });
+        if (s.changed) api.onStackChanged(asset.id);
         if (get().asset?.id !== asset.id) return;
         apply(s);
         if (s.changed) refresh();
@@ -294,6 +300,7 @@ export function createEditorStore(api: EditorApi): StoreApi<EditorState> {
         set({ stack });
         try {
           const s = await api.call("asset.set_stack", { asset: asset.id, stack: normalize(stack), label });
+          if (s.changed) api.onStackChanged(asset.id);
           if (get().asset?.id !== asset.id) return;
           // Si mientras se guardaba ya se empezó a mover otro control, lo que se ve no se pisa.
           if (get().stack !== stack) {
@@ -390,6 +397,7 @@ export function createEditorStore(api: EditorApi): StoreApi<EditorState> {
         try {
           const label = `Pedido: ${plan.prompt}`.slice(0, 200);
           const s = await api.call("asset.apply_plan", { asset: asset.id, plan: effectivePlan(plan), label });
+          if (s.changed) api.onStackChanged(asset.id);
           if (get().asset?.id !== asset.id) return;
           apply(s);
           if (s.export_hint) set({ exportHint: s.export_hint });

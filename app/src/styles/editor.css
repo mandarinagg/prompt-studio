@@ -442,3 +442,49 @@ button.asset:disabled {
     grid-template-columns: minmax(0, 1fr) 280px;
   }
 }
+
+/* ---- Tira de fotos ---- */
+.shell.editor {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+.filmstrip {
+  display: flex;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  overflow-x: auto;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+.film-item {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 64px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--warn);
+  overflow: hidden;
+  cursor: pointer;
+}
+.film-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.film-item:hover:not(:disabled) {
+  border-color: var(--line-strong);
+}
+.film-item.is-current {
+  border-color: var(--accent);
+}
+.film-item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.film-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}

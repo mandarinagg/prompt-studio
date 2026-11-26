@@ -20,6 +20,7 @@ function fakeApi(handlers: Partial<Record<Method, Handler>>) {
   const calls: { method: Method; params: any }[] = [];
   const notes: string[] = [];
   const revoked: string[] = [];
+  const stackChanged: string[] = [];
   let n = 0;
   const api: EditorApi = {
     call: (async (method: Method, params?: unknown) => {
@@ -32,9 +33,10 @@ function fakeApi(handlers: Partial<Record<Method, Handler>>) {
     revoke: (url) => revoked.push(url),
     notify: (_kind, text) => notes.push(text),
     pixelRatio: () => 1,
+    onStackChanged: (id) => stackChanged.push(id),
   };
   const preview = () => ({ path: `p${++n}.jpg`, width: 1000, height: 600, proxy_ms: 0, render_ms: 1, encode_ms: 1 });
-  return { api, calls, notes, revoked, preview };
+  return { api, calls, notes, revoked, stackChanged, preview };
 }
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
@@ -577,5 +579,104 @@ describe("pedido y borrador del plan", () => {
     const store = await openWith(e);
     await store.getState().ask("más luz");
     expect(store.getState().plan).toMatchObject({ status: "error", error: "No se pudo planificar: no se pudo analizar foto.jpg." });
+  });
+});
+
+// ------------------------------------------------------------------ miniaturas al día (#61)
+// Cada cambio guardado de la pila avisa a la biblioteca; los intermedios y los fallos no.
+describe("aviso de pila cambiada", () => {
+  function stackEngine(opts: { fail?: Set<Method>; unchanged?: Set<Method> } = {}) {
+    const f = fakeApi({});
+    const result = (m: Method, stack: EditPlan = {}) => {
+      if (opts.fail?.has(m)) throw new EngineError("no se pudo", -32000);
+      return state(stack, { cursor: 1, changed: !opts.unchanged?.has(m) });
+    };
+    (f.api as any).call = (async (m: Method, p: any) => {
+      f.calls.push({ method: m, params: p });
+      if (m === "asset.state") return state();
+      if (m === "preview.render") return f.preview();
+      if (m === "asset.set_stack") return result(m, p.stack);
+      if (m === "asset.apply_plan") return result(m, { operations: [{ op: "exposure", ev: 0.4 }] });
+      if (m === "plan.create")
+        return { plan: { source_prompt: p.prompt, operations: [{ op: "exposure", ev: 0.4 }] }, provider: "rules", ms: 1, warnings: [], errors: [], draft: null, export_hint: null };
+      if (m === "plan.draft") return { draft: p.plan, export_hint: null };
+      if (m === "asset.undo" || m === "asset.redo" || m === "asset.reset") return result(m);
+      throw new Error(m);
+    }) as EditorApi["call"];
+    return f;
+  }
+  const open = async (f: ReturnType<typeof stackEngine>) => {
+    const store = createEditorStore(f.api);
+    store.getState().setViewport(800, 500);
+    await store.getState().open(asset);
+    await settle();
+    return store;
+  };
+  const next = { operations: [{ op: "contrast" as const, amount: 20 }] };
+
+  it("live (arrastrar) no avisa; commit avisa una vez con el id de la foto", async () => {
+    const f = stackEngine();
+    const store = await open(f);
+    store.getState().live(next);
+    store.getState().live({ operations: [{ op: "contrast", amount: 25 }] });
+    await settle();
+    expect(f.stackChanged).toEqual([]);
+    await store.getState().commit(next, "Contraste +20");
+    expect(f.stackChanged).toEqual(["a1"]);
+  });
+
+  it("undo, redo y restablecer avisan una vez cada uno", async () => {
+    const f = stackEngine();
+    const store = await open(f);
+    await store.getState().undo();
+    expect(f.stackChanged).toEqual(["a1"]);
+    await store.getState().redo();
+    expect(f.stackChanged).toEqual(["a1", "a1"]);
+    await store.getState().resetAll();
+    expect(f.stackChanged).toEqual(["a1", "a1", "a1"]);
+  });
+
+  it("aplicar un plan avisa una vez; pedirlo o descartarlo no", async () => {
+    const f = stackEngine();
+    const store = await open(f);
+    await store.getState().ask("más luz");
+    await settle();
+    expect(f.stackChanged).toEqual([]);
+    await store.getState().applyPlan();
+    expect(f.stackChanged).toEqual(["a1"]);
+    await store.getState().ask("más luz");
+    await settle();
+    store.getState().discardPlan();
+    expect(f.stackChanged).toEqual(["a1"]);
+  });
+
+  it("si la operación falla, no avisa", async () => {
+    const f = stackEngine({ fail: new Set<Method>(["asset.set_stack", "asset.undo", "asset.redo", "asset.reset", "asset.apply_plan"]) });
+    const store = await open(f);
+    await store.getState().commit(next, "x");
+    await store.getState().undo();
+    await store.getState().redo();
+    await store.getState().resetAll();
+    await store.getState().ask("más luz");
+    await settle();
+    await store.getState().applyPlan();
+    expect(f.stackChanged).toEqual([]);
+  });
+
+  it("si el engine dice que no cambió nada (deshacer sin historial), no avisa", async () => {
+    const f = stackEngine({ unchanged: new Set<Method>(["asset.undo", "asset.set_stack"]) });
+    const store = await open(f);
+    await store.getState().undo();
+    await store.getState().commit({}, "igual");
+    expect(f.stackChanged).toEqual([]);
+  });
+
+  it("avisa con el id de la foto que se guardó aunque ya se haya cambiado de foto", async () => {
+    const f = stackEngine();
+    const store = await open(f);
+    const pending = store.getState().commit(next, "Contraste +20");
+    await store.getState().open({ ...asset, id: "a2", file: "otra.jpg" });
+    await pending;
+    expect(f.stackChanged).toEqual(["a1"]);
   });
 });

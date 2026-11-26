@@ -24,6 +24,8 @@ export const editorStore = createEditorStore({
   revoke: (url) => URL.revokeObjectURL(url),
   notify: (kind, text) => appStore.getState().notify(kind, text),
   pixelRatio: () => window.devicePixelRatio || 1,
+  // Declarado más abajo: se llama mucho después de crearse los dos stores.
+  onStackChanged: (id) => libraryStore.getState().invalidate(id),
 });
 
 export function useEditor<T>(selector: (s: EditorState) => T): T {
