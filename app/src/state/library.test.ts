@@ -4,6 +4,7 @@ import {
   clear,
   createLibraryStore,
   type LibraryApi,
+  idsToWant,
   MAX_IN_FLIGHT,
   moveFocusIndex,
   prune,
@@ -444,5 +445,24 @@ describe("moveFocusIndex", () => {
     expect(moveFocusIndex(1, "ArrowDown", 0, 4)).toBe(2);
     expect(moveFocusIndex(1, "a", 3, 7)).toBe(1);
     expect(moveFocusIndex(0, "ArrowRight", 3, 0)).toBe(0);
+  });
+});
+
+describe("idsToWant", () => {
+  const order = ["a", "b", "c", "d"];
+  const thumbs = {
+    b: { key: "0:o:f", url: null, status: "idle" as const },
+    c: { key: "0:o:f", url: "u", status: "ready" as const },
+  };
+  it("devuelve las visibles en orden de la biblioteca, sin las que faltan", () => {
+    const visible = new Set(["d", "c", "a", "b"]);
+    expect(idsToWant(order, visible, new Set(["a"]), thumbs, false)).toEqual(["b", "c", "d"]);
+  });
+  it("con onlyUnknown deja afuera las que ya tienen entrada (idle, ready, error)", () => {
+    const visible = new Set(["a", "b", "c", "d"]);
+    expect(idsToWant(order, visible, new Set(), thumbs, true)).toEqual(["a", "d"]);
+  });
+  it("ignora las no visibles", () => {
+    expect(idsToWant(order, new Set(["d"]), new Set(), {}, true)).toEqual(["d"]);
   });
 });

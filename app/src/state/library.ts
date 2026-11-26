@@ -99,6 +99,21 @@ export function moveFocusIndex(index: number, key: string, columns: number, coun
   }
 }
 
+/**
+ * Qué fotos visibles hay que pedir, en el orden de la biblioteca (sin las que faltan). Con
+ * `onlyUnknown` solo las que no tienen ninguna entrada: las `idle` o `error` esperan a que se
+ * vuelvan a ver, así no hay reintentos en bucle si el motor sigue rechazando.
+ */
+export function idsToWant(
+  order: string[],
+  visible: ReadonlySet<string>,
+  missing: ReadonlySet<string>,
+  thumbs: Record<string, Thumb>,
+  onlyUnknown: boolean,
+): string[] {
+  return order.filter((id) => visible.has(id) && !missing.has(id) && (!onlyUnknown || thumbs[id] === undefined));
+}
+
 // ---------------------------------------------------------------------------- store
 
 export type ThumbStatus = "idle" | "loading" | "ready" | "error";
